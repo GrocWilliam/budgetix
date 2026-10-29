@@ -153,7 +153,7 @@
 									<span class="badge badge--prorata">Prorata</span>
 								{/if}
 								<div class="shares">
-									{#each exp.computedShares as p (p.id)}
+									{#each exp.computedShares as p (p.user.id)}
 										<small>{p.user.name} : {parseFloat(p.sharePercentage).toFixed(1)}%</small>
 									{/each}
 								</div>
