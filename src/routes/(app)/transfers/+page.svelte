@@ -37,7 +37,7 @@
 			<label>
 				Compte source
 				<select name="fromAccountId" required>
-					{#each data.accounts as acc}
+					{#each data.accounts as acc (acc.id)}
 						<option value={acc.id}>{accountLabel(acc)}</option>
 					{/each}
 				</select>
@@ -45,7 +45,7 @@
 			<label>
 				Compte destination
 				<select name="toAccountId" required>
-					{#each data.accounts as acc}
+					{#each data.accounts as acc (acc.id)}
 						<option value={acc.id}>{accountLabel(acc)}</option>
 					{/each}
 				</select>
@@ -80,7 +80,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.transfers as t}
+				{#each data.transfers as t (t.id)}
 					<tr>
 						<td>{t.label}</td>
 						<td>
@@ -125,7 +125,7 @@
 										<label>
 											Compte source
 											<select name="fromAccountId">
-												{#each data.accounts as acc}
+												{#each data.accounts as acc (acc.id)}
 													<option value={acc.id} selected={acc.id === t.fromAccountId}
 														>{accountLabel(acc)}</option
 													>
@@ -135,7 +135,7 @@
 										<label>
 											Compte destination
 											<select name="toAccountId">
-												{#each data.accounts as acc}
+												{#each data.accounts as acc (acc.id)}
 													<option value={acc.id} selected={acc.id === t.toAccountId}
 														>{accountLabel(acc)}</option
 													>

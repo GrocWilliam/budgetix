@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 	import { enhance } from '$app/forms';
 
 	type Expense = PageData['expenses'][number];
 	type Account = PageData['accounts'][number];
 
-	let { data } = $props<{ data: PageData }>();
+	let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
 	let isShared = $state(false);
 	let isProrata = $state(false);
@@ -27,6 +27,10 @@
 
 <h1>Dépenses</h1>
 
+{#if form?.message}
+	<p class="error">{form.message}</p>
+{/if}
+
 <section class="card">
 	<h2>Ajouter une dépense récurrente</h2>
 	<form method="POST" action="?/create" use:enhance>
@@ -38,7 +42,7 @@
 			<label>
 				Compte
 				<select name="bankAccountId" required>
-					{#each data.accounts as acc}
+					{#each data.accounts as acc (acc.id)}
 						<option value={acc.id}>{acc.name}</option>
 					{/each}
 				</select>
@@ -77,7 +81,7 @@
 					<span class="badge badge--prorata">Prorata</span>
 					La répartition sera calculée automatiquement selon les revenus personnels de chaque participant.
 					<div class="participants" style="margin-top:0.5rem">
-						{#each data.linkedUsers as u}
+						{#each data.linkedUsers as u (u.id)}
 							<input type="hidden" name="participantId" value={u.id} />
 						{/each}
 					</div>
@@ -85,7 +89,7 @@
 			{:else}
 				<div class="participants">
 					<h3>Répartition</h3>
-					{#each data.linkedUsers as u}
+					{#each data.linkedUsers as u (u.id)}
 						<div class="participant-row">
 							<span>{u.name} ({u.email})</span>
 							<input type="hidden" name="participantId" value={u.id} />
@@ -116,7 +120,7 @@
 		<p class="empty">Aucune dépense définie.</p>
 	{:else}
 		<div class="tabs">
-			{#each accountTabs as tab}
+			{#each accountTabs as tab (tab.id)}
 				<button
 					class="tab"
 					class:active={currentTab === tab.id}
@@ -133,7 +137,7 @@
 				>
 			</thead>
 			<tbody>
-				{#each visible as exp}
+				{#each visible as exp (exp.id)}
 					<tr>
 						<td>{exp.label}</td>
 
@@ -149,7 +153,7 @@
 									<span class="badge badge--prorata">Prorata</span>
 								{/if}
 								<div class="shares">
-									{#each exp.computedShares as p}
+									{#each exp.computedShares as p (p.id)}
 										<small>{p.user.name} : {parseFloat(p.sharePercentage).toFixed(1)}%</small>
 									{/each}
 								</div>
@@ -198,7 +202,7 @@
 										<label>
 											Compte
 											<select name="bankAccountId">
-												{#each data.accounts as acc}
+												{#each data.accounts as acc (acc.id)}
 													<option value={acc.id} selected={acc.id === exp.bankAccountId}
 														>{acc.name}</option
 													>
@@ -249,6 +253,11 @@
 </section>
 
 <style>
+	.error {
+		color: #f7768e;
+		font-size: 0.9rem;
+		margin-bottom: 0.75rem;
+	}
 	h1 {
 		margin-bottom: 1.5rem;
 	}

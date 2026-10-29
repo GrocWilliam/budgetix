@@ -43,6 +43,27 @@
       "when": 1772213872572,
       "tag": "0005_long_bromley",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793290004838,
+      "tag": "0006_realized_month_share_uniq",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793290013343,
+      "tag": "0007_drop_is_realized",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793291562242,
+      "tag": "0008_user_link_uniq",
+      "breakpoints": true
     }
   ]
 }

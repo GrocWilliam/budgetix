@@ -65,7 +65,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.owned as acc}
+				{#each data.owned as acc (acc.id)}
 					<tr>
 						<td>
 							<span class="dot" style="background:{acc.color ?? '#888'}"></span>
@@ -85,7 +85,7 @@
 								<span class="muted">—</span>
 							{:else}
 								<div class="share-pills">
-									{#each acc.shares as s}
+									{#each acc.shares as s (s.id)}
 										<span class="pill">
 											{s.sharedWithUser.name}
 											<form method="POST" action="?/unshare" use:enhance style="display:inline">
@@ -124,7 +124,7 @@
 							<td colspan="6">
 								<div class="share-panel">
 									<strong>Partager avec :</strong>
-									{#each data.linkedUsers as u}
+									{#each data.linkedUsers as u (u.id)}
 										{@const alreadyShared = acc.shares.some(
 											(s: { sharedWithUser: { id: string } }) => s.sharedWithUser.id === u.id
 										)}
@@ -237,7 +237,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.shared as acc}
+				{#each data.shared as acc (acc.id)}
 					<tr>
 						<td>
 							<span class="dot" style="background:{acc.color ?? '#888'}"></span>

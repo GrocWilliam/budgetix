@@ -34,7 +34,7 @@
 		<p class="empty">Aucune demande en attente.</p>
 	{:else}
 		<ul class="request-list">
-			{#each data.pending as req}
+			{#each data.pending as req (req.id)}
 				<li>
 					<div class="user-info">
 						<strong>{req.requester.name}</strong>
@@ -63,7 +63,7 @@
 		<p class="empty">Aucune demande envoyée.</p>
 	{:else}
 		<ul class="request-list">
-			{#each data.sent as req}
+			{#each data.sent as req (req.id)}
 				<li>
 					<div class="user-info">
 						<strong>{req.receiver.name}</strong>
@@ -93,7 +93,7 @@
 		<p class="empty">Aucune liaison active pour l'instant.</p>
 	{:else}
 		<ul class="request-list">
-			{#each data.linked as u}
+			{#each data.linked as u (u.id)}
 				<li>
 					<div class="user-info">
 						<strong>{u.name}</strong>

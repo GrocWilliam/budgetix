@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 	import { enhance } from '$app/forms';
 
 	type Income = PageData['incomes'][number];
 	type Account = PageData['accounts'][number];
 
-	let { data } = $props<{ data: PageData }>();
+	let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
 	let editingId = $state<number | null>(null);
 	let activeTab = $state<number | null>(null);
@@ -25,6 +25,10 @@
 
 <h1>Revenus</h1>
 
+{#if form?.message}
+	<p class="error">{form.message}</p>
+{/if}
+
 <section class="card">
 	<h2>Ajouter un revenu récurrent</h2>
 	<form method="POST" action="?/create" use:enhance>
@@ -36,7 +40,7 @@
 			<label>
 				Compte
 				<select name="bankAccountId" required>
-					{#each data.accounts as acc}
+					{#each data.accounts as acc (acc.id)}
 						<option value={acc.id}>{acc.name}</option>
 					{/each}
 				</select>
@@ -60,7 +64,7 @@
 		<p class="empty">Aucun revenu défini.</p>
 	{:else}
 		<div class="tabs">
-			{#each accountTabs as tab}
+			{#each accountTabs as tab (tab.id)}
 				<button
 					class="tab"
 					class:active={currentTab === tab.id}
@@ -73,7 +77,7 @@
 				<tr><th>Libellé</th><th>Montant</th><th>Jour</th><th></th></tr>
 			</thead>
 			<tbody>
-				{#each visible as inc}
+				{#each visible as inc (inc.id)}
 					<tr>
 						<td>{inc.label}</td>
 						<td class="amount">+{parseFloat(inc.amount).toFixed(2)} €</td>
@@ -110,7 +114,7 @@
 										<label>
 											Compte
 											<select name="bankAccountId">
-												{#each data.accounts as acc}
+												{#each data.accounts as acc (acc.id)}
 													<option value={acc.id} selected={acc.id === inc.bankAccountId}
 														>{acc.name}</option
 													>
@@ -157,6 +161,11 @@
 </section>
 
 <style>
+	.error {
+		color: #f7768e;
+		font-size: 0.9rem;
+		margin-bottom: 0.75rem;
+	}
 	h1 {
 		margin-bottom: 1.5rem;
 	}

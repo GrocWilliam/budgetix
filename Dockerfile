@@ -1,6 +1,7 @@
 FROM node:22-alpine
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Version de pnpm lue depuis "packageManager" dans package.json
+RUN corepack enable
 
 WORKDIR /app
 
@@ -9,15 +10,15 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copier les sources et builder l'application
-# DATABASE_URL fictive pour satisfaire la vérification au chargement du module
-# (postgres.js ne se connecte pas réellement avant la première requête)
+# (getDb() est paresseux : pas besoin de DATABASE_URL au build)
 COPY . .
 RUN pnpm build
 
 # Variables d'environnement requises
 # DATABASE_URL=postgres://user:password@host:5432/dbname
 # BETTER_AUTH_SECRET=<secret>
-# BETTER_AUTH_URL=http://localhost:3000
+# ORIGIN=https://budget.example.com   (URL publique : CSRF + Better Auth)
+# Les migrations drizzle sont appliquées au démarrage (entrypoint.sh)
 
 ENV NODE_ENV=production \
     PORT=3000 \

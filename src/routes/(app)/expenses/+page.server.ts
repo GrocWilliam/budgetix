@@ -1,65 +1,91 @@
+import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getExpensesWithShares, createExpense, updateExpense, deleteExpense, getAccessibleAccounts, getLinkedUsers, toggleExpenseRealized } from '$lib/server/budget';
+import {
+	getExpensesWithShares,
+	createExpense,
+	updateExpense,
+	deleteExpense,
+	getAccessibleAccounts,
+	getLinkedUsers,
+	toggleExpenseRealized
+} from '$lib/server/budget';
+import { isPositiveAmount, isDay } from '$lib/server/rules';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const userId = locals.user!.id;
-  const [expenses, accounts, linkedUsers] = await Promise.all([
-    getExpensesWithShares(),
-    getAccessibleAccounts(userId),
-    getLinkedUsers(userId)
-  ]);
-  return { expenses, accounts, linkedUsers };
+	const userId = locals.user!.id;
+	const [expenses, accounts, linkedUsers] = await Promise.all([
+		getExpensesWithShares(userId),
+		getAccessibleAccounts(userId),
+		getLinkedUsers(userId)
+	]);
+	return { expenses, accounts, linkedUsers };
 };
 
+function parseExpense(fd: FormData) {
+	const data = {
+		bankAccountId: Number(fd.get('bankAccountId')),
+		label: (fd.get('label') as string)?.trim(),
+		amount: fd.get('amount') as string,
+		dayOfMonth: Number(fd.get('dayOfMonth'))
+	};
+	return data.label && isPositiveAmount(data.amount) && isDay(data.dayOfMonth) ? data : null;
+}
+
 export const actions = {
-  create: async ({ request, locals }) => {
-    const fd = await request.formData();
-    const isShared = fd.get('isShared') === 'on';
-    const isProrata = fd.get('isProrata') === 'on';
+	create: async ({ request, locals }) => {
+		const fd = await request.formData();
+		const data = parseExpense(fd);
+		if (!data) return fail(400, { message: 'Données invalides.' });
+		const isShared = fd.get('isShared') === 'on';
+		const isProrata = fd.get('isProrata') === 'on';
 
-    const participantIds = (fd.getAll('participantId') as string[]).filter(Boolean);
-    const participantShares = (fd.getAll('participantShare') as string[]).filter(Boolean);
-    const participants = participantIds.map((userId, i) => ({
-      userId,
-      sharePercentage: participantShares[i] ?? '50'
-    }));
+		// Pas de filtre sur les parts : elles restent alignées avec les ids (vide = 0 %)
+		const participantShares = fd.getAll('participantShare') as string[];
+		const participants = (fd.getAll('participantId') as string[]).map((userId, i) => ({
+			userId,
+			sharePercentage: participantShares[i] || '0'
+		}));
 
-    await createExpense(locals.user!.id, {
-      bankAccountId: Number(fd.get('bankAccountId')),
-      label: fd.get('label') as string,
-      amount: fd.get('amount') as string,
-      category: (fd.get('category') as string) || undefined,
-      dayOfMonth: Number(fd.get('dayOfMonth')),
-      isShared,
-      isProrata,
-      participants: isShared ? participants : undefined
-    });
-    return { success: true };
-  },
+		try {
+			await createExpense(locals.user!.id, {
+				...data,
+				category: (fd.get('category') as string) || undefined,
+				isShared,
+				isProrata,
+				participants: isShared ? participants : undefined
+			});
+		} catch (e) {
+			return fail(400, { message: (e as Error).message });
+		}
+		return { success: true };
+	},
 
-  delete: async ({ request }) => {
-    const fd = await request.formData();
-    await deleteExpense(Number(fd.get('id')));
-    return { success: true };
-  },
+	delete: async ({ request, locals }) => {
+		const fd = await request.formData();
+		await deleteExpense(locals.user!.id, Number(fd.get('id')));
+		return { success: true };
+	},
 
-  update: async ({ request }) => {
-    const fd = await request.formData();
-    await updateExpense(Number(fd.get('id')), {
-      bankAccountId: Number(fd.get('bankAccountId')),
-      label: fd.get('label') as string,
-      amount: fd.get('amount') as string,
-      category: (fd.get('category') as string) || null,
-      dayOfMonth: Number(fd.get('dayOfMonth'))
-    });
-    return { success: true };
-  },
+	update: async ({ request, locals }) => {
+		const fd = await request.formData();
+		const data = parseExpense(fd);
+		if (!data) return fail(400, { message: 'Données invalides.' });
+		try {
+			await updateExpense(locals.user!.id, Number(fd.get('id')), {
+				...data,
+				category: (fd.get('category') as string) || null
+			});
+		} catch (e) {
+			return fail(400, { message: (e as Error).message });
+		}
+		return { success: true };
+	},
 
-  toggleRealized: async ({ request }) => {
-    const fd = await request.formData();
-    const id = Number(fd.get('id'));
-    const isRealized = fd.get('isRealized') === 'true';
-    await toggleExpenseRealized(id, isRealized);
-    return { success: true };
-  }
+	toggleRealized: async ({ request, locals }) => {
+		const fd = await request.formData();
+		const id = Number(fd.get('id'));
+		const isRealized = fd.get('isRealized') === 'true';
+		await toggleExpenseRealized(locals.user!.id, id, isRealized);
+		return { success: true };
+	}
 } satisfies Actions;

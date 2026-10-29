@@ -6,12 +6,12 @@ import { env } from '$env/dynamic/private';
 let db = null as ReturnType<typeof drizzle<typeof schema>> | null;
 
 export function getDb() {
-  if (db) return db;
+	if (db) return db;
 
-  if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+	if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
 
-  const client = postgres(env.DATABASE_URL);
-  db = drizzle(client, { schema });
+	const client = postgres(env.DATABASE_URL);
+	db = drizzle(client, { schema });
 
-  return db;
+	return db;
 }

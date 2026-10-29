@@ -30,7 +30,7 @@
 			prorata de vos revenus personnels.
 		</p>
 		<div class="suggestions-grid">
-			{#each data.suggestions as s}
+			{#each data.suggestions as s (s.id)}
 				<div class="suggestion-card" style="border-left: 4px solid {s.account.color ?? '#bb9af7'}">
 					<div class="suggestion-header">
 						<span class="suggestion-account">{s.account.name}</span>
@@ -58,7 +58,7 @@
 					</div>
 					{#if s.breakdown.length > 1}
 						<div class="breakdown">
-							{#each s.breakdown as b}
+							{#each s.breakdown as b (b.id)}
 								<div class="breakdown-row">
 									<span>{b.userName}</span>
 									<span>{fmt(b.amount)} € ({b.sharePercent.toFixed(1)} %)</span>
@@ -80,7 +80,7 @@
 </div>
 
 <div class="accounts-grid">
-	{#each data.accounts as acc}
+	{#each data.accounts as acc (acc.id)}
 		<div class="account-card" style="border-top: 4px solid {acc.color ?? typeColors[acc.type]}">
 			<div class="account-header">
 				<span class="account-name">{acc.name}</span>
