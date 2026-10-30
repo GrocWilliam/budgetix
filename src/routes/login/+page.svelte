@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import type { ActionData } from './$types';
 
 	let { form } = $props<{ form: ActionData }>();
-	let mode = $state<'login' | 'register'>('login');
+	let mode = $state<'login' | 'register'>(
+		page.url.searchParams.get('mode') === 'register' ? 'register' : 'login'
+	);
 </script>
 
 <div class="center">
