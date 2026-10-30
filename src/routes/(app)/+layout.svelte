@@ -84,8 +84,42 @@
 	}
 	.content {
 		flex: 1;
+		/* sans ça, un tableau large élargit la colonne au lieu de défiler dans sa carte */
+		min-width: 0;
 		padding: 2rem;
 		background: #1a1b26;
 		color: #c0caf5;
+	}
+
+	/* Mobile : la barre latérale devient une barre du haut qui défile horizontalement */
+	@media (max-width: 700px) {
+		.app-shell {
+			flex-direction: column;
+		}
+		.sidebar {
+			width: auto;
+			flex-direction: row;
+			align-items: center;
+			overflow-x: auto;
+			padding: 0.5rem 1rem;
+		}
+		.brand {
+			margin: 0 0.5rem 0 0;
+		}
+		.sidebar > * {
+			flex-shrink: 0;
+			white-space: nowrap;
+		}
+		.spacer,
+		.user-email {
+			display: none;
+		}
+		button {
+			margin: 0;
+			width: auto;
+		}
+		.content {
+			padding: 1rem;
+		}
 	}
 </style>

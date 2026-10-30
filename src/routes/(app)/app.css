@@ -27,6 +27,18 @@
 	border-radius: 10px;
 	padding: 1.5rem;
 	margin-bottom: 1.5rem;
+	/* les tableaux larges défilent dans la carte plutôt que d'élargir la page */
+	overflow-x: auto;
+}
+@media (max-width: 700px) {
+	:where(.app-shell > main) .card {
+		padding: 1rem;
+	}
+	/* une ligne par cellule : le tableau défile dans sa carte au lieu de couper « 1500.00 / € » */
+	:where(.app-shell > main) th,
+	:where(.app-shell > main) td {
+		white-space: nowrap;
+	}
 }
 :where(.app-shell > main) label {
 	display: flex;

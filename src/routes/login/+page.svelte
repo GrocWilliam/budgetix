@@ -47,13 +47,14 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		padding: 1rem;
 		background: #1a1b26;
 	}
 	.box {
 		background: #24283b;
 		border-radius: 12px;
-		padding: 2.5rem;
-		width: 360px;
+		padding: 2.5rem 1.5rem;
+		width: min(360px, 100%);
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;

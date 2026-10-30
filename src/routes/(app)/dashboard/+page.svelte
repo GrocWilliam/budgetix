@@ -181,6 +181,7 @@
 	.total {
 		font-size: 2rem;
 		font-weight: 700;
+		white-space: nowrap;
 		color: #9ece6a;
 	}
 	.total.negative {
@@ -189,7 +190,7 @@
 
 	.accounts-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
 		gap: 1.25rem;
 	}
 
@@ -330,7 +331,7 @@
 	}
 	.suggestions-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
 		gap: 1rem;
 	}
 	.suggestion-card {
