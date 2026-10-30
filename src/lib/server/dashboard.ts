@@ -3,7 +3,16 @@ import { bankAccountShare, income, expense, scheduledTransfer, user } from './db
 import { or, inArray } from 'drizzle-orm';
 import type { AccessibleAccount } from './accounts';
 import { incomeByUser } from './incomes';
-import { cents, currentMonth, euros, isDue, prorataShares, sum } from './rules';
+import {
+	cents,
+	currentMonth,
+	euros,
+	isDue,
+	parisToday,
+	projectMonth,
+	prorataShares,
+	sum
+} from './rules';
 
 /**
  * Pour chaque compte commun accessible à l'utilisateur, calcule ce que chacun doit y virer
@@ -120,16 +129,22 @@ export async function getCommonAccountSuggestions(userId: string, accessible: Ac
 }
 
 /**
- * Solde de chaque compte accessible :
- * - `balance` : théorique en fin de mois (solde initial + tous les mouvements du mois)
- * - `expectedToday` : prévu aujourd'hui (seuls les mouvements dont le jour est passé)
- * - `delta` : solde actuel saisi - prévu aujourd'hui (null sans solde actuel)
- * `totalBalance` ne compte que les comptes de l'utilisateur, pas ceux partagés avec lui.
+ * Pour chaque compte accessible :
+ * - `monthlyMargin` : ce qui reste chaque mois après les mouvements habituels
+ *   (revenus + virements entrants - dépenses - virements sortants), indépendant du solde
+ * - `projectedEnd` : solde prévu en fin de mois = solde de départ + mouvements encore à venir
+ *   (dépenses non cochées « réalisée », revenus et virements dont le jour n'est pas passé).
+ *   Départ = solde actuel saisi, sinon le solde prévu aujourd'hui.
+ * - `overdraftDay` : jour où le compte passe sous zéro ce mois-ci (null si jamais)
+ * - `expectedToday` / `delta` : prévu aujourd'hui et écart avec le solde actuel saisi
+ * `totalProjected` ne compte que les comptes de l'utilisateur, pas ceux partagés avec lui.
  */
 export async function getDashboard(userId: string, accounts: AccessibleAccount[]) {
 	const ids = accounts.map((a) => a.id);
 	const now = new Date();
 	const month = currentMonth(now);
+	const { day: today, daysInMonth } = parisToday(now);
+	const dayOf = (d: number) => Math.min(d, daysInMonth);
 
 	const [incomes, expenses, transfers] = await Promise.all([
 		getDb().query.income.findMany({ where: inArray(income.bankAccountId, ids) }),
@@ -142,8 +157,13 @@ export async function getDashboard(userId: string, accounts: AccessibleAccount[]
 		})
 	]);
 
-	const dueSum = (rows: { amount: string; dayOfMonth: number }[]) =>
-		sum(rows.filter((r) => isDue(r.dayOfMonth, now)));
+	type Row = { amount: string; dayOfMonth: number };
+	const dueSum = (rows: Row[]) => sum(rows.filter((r) => isDue(r.dayOfMonth, now)));
+	// Mouvements dont le jour n'est pas encore passé, signés : +1 crédit, -1 débit
+	const upcoming = (rows: Row[], sign: 1 | -1) =>
+		rows
+			.filter((r) => dayOf(r.dayOfMonth) > today)
+			.map((r) => ({ day: dayOf(r.dayOfMonth), amount: sign * cents(r.amount) }));
 
 	const computed = accounts.map((acc) => {
 		const accIncomes = incomes.filter((i) => i.bankAccountId === acc.id);
@@ -154,27 +174,45 @@ export async function getDashboard(userId: string, accounts: AccessibleAccount[]
 		const accIn = transfers.filter((t) => t.toAccountId === acc.id);
 
 		const initial = cents(acc.initialBalance);
-		const balance = initial + sum(accIncomes) - sum(accExpenses) - sum(accOut) + sum(accIn);
-		const expectedToday =
-			initial + dueSum(accIncomes) - dueSum(accExpenses) - dueSum(accOut) + dueSum(accIn);
-		const delta = acc.currentBalance == null ? null : cents(acc.currentBalance) - expectedToday;
+		const monthlyMargin = sum(accIncomes) + sum(accIn) - sum(accExpenses) - sum(accOut);
+		// Dépenses : seules celles cochées « réalisée » ce mois-ci, la coche est l'info de l'utilisateur ;
+		// revenus et virements n'ont pas de coche : leur jour du mois fait foi
+		const realized = sum(accExpenses.filter((e) => e.realizedMonth === month));
+		const expectedToday = initial + dueSum(accIncomes) - realized - dueSum(accOut) + dueSum(accIn);
+		const current = acc.currentBalance == null ? null : cents(acc.currentBalance);
+
+		const { end, overdraftDay } = projectMonth(
+			current ?? expectedToday,
+			[
+				...upcoming(accIncomes, 1),
+				...upcoming(accIn, 1),
+				...upcoming(accOut, -1),
+				// Dépense non cochée dont le jour est passé : en retard, elle peut tomber dès aujourd'hui
+				...accExpenses
+					.filter((e) => e.realizedMonth !== month)
+					.map((e) => ({ day: Math.max(dayOf(e.dayOfMonth), today), amount: -cents(e.amount) }))
+			],
+			today
+		);
 
 		return {
 			...acc,
 			totalIncomes: euros(sum(accIncomes)),
 			totalExpenses: euros(sum(accExpenses)),
-			totalRealizedExpenses: euros(sum(accExpenses.filter((e) => e.realizedMonth === month))),
+			totalRealizedExpenses: euros(realized),
 			totalTransfersOut: euros(sum(accOut)),
 			totalTransfersIn: euros(sum(accIn)),
-			balance: euros(balance),
+			monthlyMargin: euros(monthlyMargin),
+			projectedEnd: euros(end),
+			overdraftDay,
 			expectedToday: euros(expectedToday),
-			delta: delta === null ? null : euros(delta)
+			delta: current === null ? null : euros(current - expectedToday)
 		};
 	});
 
-	// balance * 100 redonne exactement les centimes (balance = centimes / 100)
-	const totalBalance = euros(
-		computed.filter((a) => a.userId === userId).reduce((s, a) => s + Math.round(a.balance * 100), 0)
-	);
-	return { accounts: computed, totalBalance };
+	const mine = computed.filter((a) => a.userId === userId);
+	// projectedEnd * 100 redonne exactement les centimes (projectedEnd = centimes / 100)
+	const totalProjected = euros(mine.reduce((s, a) => s + Math.round(a.projectedEnd * 100), 0));
+	const atRisk = mine.filter((a) => a.overdraftDay !== null).length;
+	return { accounts: computed, totalProjected, atRisk, today };
 }

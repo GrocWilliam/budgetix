@@ -64,15 +64,26 @@
 {/if}
 
 <div class="total-card">
-	<span class="label">Solde total de mes comptes (fin de mois)</span>
-	<span class="total" class:negative={data.totalBalance < 0}>
-		{fmt(data.totalBalance)} €
+	<div>
+		<span class="label">Reste prévu en fin de mois (mes comptes)</span>
+		{#if data.atRisk > 0}
+			<div class="risk">
+				⚠ {data.atRisk} compte{data.atRisk > 1 ? 's' : ''} à découvert prévu ce mois-ci
+			</div>
+		{/if}
+	</div>
+	<span class="total" class:negative={data.totalProjected < 0}>
+		{fmt(data.totalProjected)} €
 	</span>
 </div>
 
 <div class="accounts-grid">
 	{#each data.accounts as acc (acc.id)}
-		<div class="account-card" style="border-top: 4px solid {acc.color ?? typeColors[acc.type]}">
+		<div
+			class="account-card"
+			class:at-risk={acc.overdraftDay !== null}
+			style="border-top: 4px solid {acc.color ?? typeColors[acc.type]}"
+		>
 			<div class="account-header">
 				<span class="account-name">{acc.name}</span>
 				<span class="type-badge" style="color:{typeColors[acc.type]}">{typeLabels[acc.type]}</span>
@@ -81,33 +92,41 @@
 				<div class="shared-by">Partagé par {acc._sharedBy.name}</div>
 			{/if}
 
-			{#if acc.currentBalance != null && acc.delta != null}
-				{@const current = parseFloat(acc.currentBalance)}
-				<div class="current-balance-row">
-					<span class="current-balance-label">Solde actuel</span>
-					<span class="current-balance-value" class:negative={current < 0}>{fmt(current)} €</span>
+			{#if acc.overdraftDay !== null}
+				<div class="alert">
+					⚠ Découvert {acc.overdraftDay === data.today
+						? "dès aujourd'hui"
+						: `prévu le ${acc.overdraftDay}`}
 				</div>
-				<div
-					class="delta-row"
-					class:delta-pos={acc.delta >= 0}
-					class:delta-neg={acc.delta < 0}
-					title="Prévu aujourd'hui : {fmt(acc.expectedToday)} €"
-				>
-					<span>Écart vs prévu aujourd'hui</span>
-					<span>{acc.delta >= 0 ? '+' : ''}{fmt(acc.delta)} €</span>
-				</div>
-				<div class="balance balance--theoretical" class:negative={acc.balance < 0}>
-					{fmt(acc.balance)} € <span class="theoretical-label">fin de mois</span>
-				</div>
-			{:else}
-				<div class="balance" class:negative={acc.balance < 0}>{fmt(acc.balance)} €</div>
 			{/if}
 
+			<div class="balance-label">Reste prévu en fin de mois</div>
+			<div class="balance" class:negative={acc.projectedEnd < 0}>{fmt(acc.projectedEnd)} €</div>
+			<div class="margin-row" class:pos={acc.monthlyMargin >= 0} class:neg={acc.monthlyMargin < 0}>
+				<span>Marge mensuelle</span>
+				<span>{acc.monthlyMargin >= 0 ? '+' : ''}{fmt(acc.monthlyMargin)} € / mois</span>
+			</div>
+
 			<div class="details">
-				<div class="detail-row">
-					<span>Solde initial</span>
-					<span>{fmt(parseFloat(acc.initialBalance))} €</span>
-				</div>
+				{#if acc.currentBalance != null && acc.delta != null}
+					<div class="detail-row">
+						<span>Solde actuel</span>
+						<span>{fmt(parseFloat(acc.currentBalance))} €</span>
+					</div>
+					<div class="detail-row">
+						<span>Prévu aujourd'hui</span>
+						<span>{fmt(acc.expectedToday)} €</span>
+					</div>
+					<div class="detail-row" class:delta-neg={acc.delta < 0}>
+						<span>Écart vs prévu</span>
+						<span>{acc.delta >= 0 ? '+' : ''}{fmt(acc.delta)} €</span>
+					</div>
+				{:else}
+					<div class="detail-row">
+						<span>Solde initial</span>
+						<span>{fmt(parseFloat(acc.initialBalance))} €</span>
+					</div>
+				{/if}
 				<div class="detail-row income">
 					<span>Revenus / mois</span>
 					<span>+{fmt(acc.totalIncomes)} €</span>
@@ -243,54 +262,50 @@
 		color: #6c7086;
 		font-style: italic;
 	}
-	.current-balance-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		margin-bottom: 0.15rem;
-	}
-	.current-balance-label {
+	.balance-label {
 		font-size: 0.75rem;
-		color: #9ece6a;
+		color: #6c7086;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 	}
-	.current-balance-value {
-		font-size: 1.6rem;
-		font-weight: 700;
-		color: #9ece6a;
-	}
-	.current-balance-value.negative {
-		color: #f7768e;
-	}
-	.delta-row {
+	.margin-row {
 		display: flex;
 		justify-content: space-between;
-		font-size: 0.8rem;
-		margin-bottom: 0.4rem;
-		padding: 0.2rem 0.5rem;
+		font-size: 0.85rem;
+		font-weight: 600;
+		margin: -0.5rem 0 0.75rem;
+		padding: 0.25rem 0.5rem;
 		border-radius: 4px;
 	}
-	.delta-pos {
+	.margin-row.pos {
 		color: #9ece6a;
 		background: #9ece6a11;
 	}
-	.delta-neg {
+	.margin-row.neg {
 		color: #f7768e;
 		background: #f7768e11;
 	}
-	.balance--theoretical {
-		font-size: 1rem;
-		color: #6c7086;
-		margin-bottom: 0.25rem;
-		display: flex;
-		align-items: baseline;
-		gap: 0.4rem;
+	.detail-row.delta-neg span:last-child {
+		color: #f7768e;
 	}
-	.theoretical-label {
-		font-size: 0.7rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
+	/* Compte qui passe à découvert ce mois-ci */
+	.account-card.at-risk {
+		box-shadow: inset 0 0 0 1px #f7768e;
+	}
+	.alert {
+		color: #f7768e;
+		background: #f7768e1a;
+		border-radius: 4px;
+		padding: 0.3rem 0.5rem;
+		font-size: 0.85rem;
+		font-weight: 600;
+		margin-bottom: 0.6rem;
+	}
+	.risk {
+		color: #f7768e;
+		font-size: 0.85rem;
+		font-weight: 600;
+		margin-top: 0.25rem;
 	}
 
 	.empty a {

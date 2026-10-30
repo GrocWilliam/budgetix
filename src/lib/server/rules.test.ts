@@ -1,6 +1,15 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { fixedShares, prorataShares, isAmount, isDay, currentMonth, sum, isDue } from './rules';
+import {
+	fixedShares,
+	prorataShares,
+	isAmount,
+	isDay,
+	currentMonth,
+	sum,
+	isDue,
+	projectMonth
+} from './rules';
 
 test('fixedShares: author gets the remainder', () => {
 	const r = fixedShares('a', [{ userId: 'b', sharePercentage: '70' }]);
@@ -65,4 +74,39 @@ test('isDue: day passed this month, Paris time, short months', () => {
 	// 31 mars 22:30 UTC = 1er avril 00:30 à Paris
 	const apr1 = new Date('2026-03-31T22:30:00Z');
 	assert.ok(isDue(1, apr1) && !isDue(2, apr1));
+});
+
+test('projectMonth: end balance and first overdraft day', () => {
+	// Le cas du tableau de bord : 159,51 € sur le compte, 242,54 € de dépenses non cochées (en retard)
+	assert.deepEqual(projectMonth(15951, [{ day: 30, amount: -24254 }], 30), {
+		end: -8303,
+		overdraftDay: 30
+	});
+	// Salaire le 28 après un loyer le 5 : découvert du 5 au 28
+	assert.deepEqual(
+		projectMonth(
+			10000,
+			[
+				{ day: 28, amount: 200000 },
+				{ day: 5, amount: -80000 }
+			],
+			1
+		),
+		{ end: 130000, overdraftDay: 5 }
+	);
+	// Même jour : le débit passe avant le crédit
+	assert.equal(
+		projectMonth(
+			0,
+			[
+				{ day: 10, amount: 500 },
+				{ day: 10, amount: -500 }
+			],
+			1
+		).overdraftDay,
+		10
+	);
+	// Déjà sous zéro : découvert dès aujourd'hui
+	assert.equal(projectMonth(-1, [], 12).overdraftDay, 12);
+	assert.equal(projectMonth(100, [{ day: 3, amount: -100 }], 1).overdraftDay, null);
 });

@@ -182,8 +182,46 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 		}
 		const { accounts } = await getDashboard(a, await getAccessibleAccounts(a));
 		const zero = accounts.find((x) => x.id === acc)!;
-		assert.equal(zero.balance, 0);
-		assert.ok(!(zero.balance < 0));
+		// Sans solde actuel : départ 100.30, les deux dépenses non cochées restent à venir
+		assert.equal(zero.projectedEnd, 0);
+		assert.ok(!(zero.projectedEnd < 0));
+		assert.equal(zero.overdraftDay, null);
+		assert.equal(zero.monthlyMargin, -100.3);
+	});
+
+	test('prévu aujourd’hui : une dépense compte seulement si elle est cochée réalisée', async () => {
+		const acc = (
+			await getDb()
+				.insert(bankAccount)
+				.values({ userId: a, name: 'Suivi', currentBalance: '100' })
+				.returning()
+		)[0].id;
+		// Jour 1 : toujours passé, ce n'est donc pas le jour qui décide pour la dépense
+		await createIncome(a, { bankAccountId: acc, label: 'Salaire', amount: '100', dayOfMonth: 1 });
+		const exp = await createExpense(a, {
+			bankAccountId: acc,
+			label: 'Courses',
+			amount: '30',
+			dayOfMonth: 1,
+			isShared: false,
+			isProrata: false
+		});
+		const card = async () =>
+			(await getDashboard(a, await getAccessibleAccounts(a))).accounts.find((x) => x.id === acc)!;
+
+		let c = await card();
+		assert.equal(c.expectedToday, 100);
+		assert.equal(c.delta, 0);
+		// Solde actuel 100, dépense de 30 non cochée encore à venir
+		assert.equal(c.projectedEnd, 70);
+		assert.equal(c.monthlyMargin, 70);
+
+		await toggleExpenseRealized(a, exp.id, true);
+		c = await card();
+		assert.equal(c.expectedToday, 70);
+		assert.equal(c.delta, 30);
+		// Cochée : déjà sortie du solde actuel saisi, plus rien à venir
+		assert.equal(c.projectedEnd, 100);
 	});
 
 	test('équilibrage : parts fixes de la dépense, prorata pour le reste ; total sans les comptes partagés', async () => {
@@ -231,6 +269,7 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 		// B voit le compte commun de A, mais son total ne compte que ses comptes : 0 + 2000
 		const dash = await getDashboard(b, await getAccessibleAccounts(b));
 		assert.ok(dash.accounts.some((x) => x.id === commonA));
-		assert.equal(dash.totalBalance, 2000);
+		assert.equal(dash.totalProjected, 2000);
+		assert.equal(dash.atRisk, 0);
 	});
 });

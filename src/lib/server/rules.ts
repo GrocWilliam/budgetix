@@ -36,12 +36,36 @@ export const currentMonth = (now = new Date()) =>
  * Un jour au-delà de la fin du mois (31 en février) tombe le dernier jour.
  */
 export function isDue(dayOfMonth: number, now = new Date()) {
-	const [y, m, d] = now
+	const { day, daysInMonth } = parisToday(now);
+	return Math.min(dayOfMonth, daysInMonth) <= day;
+}
+
+/** Jour du mois et nombre de jours du mois, à Paris */
+export function parisToday(now = new Date()) {
+	const [y, m, day] = now
 		.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' })
 		.split('-')
 		.map(Number);
-	const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
-	return Math.min(dayOfMonth, daysInMonth) <= d;
+	return { day, daysInMonth: new Date(Date.UTC(y, m, 0)).getUTCDate() };
+}
+
+/**
+ * Déroule les mouvements à venir du mois (centimes signés, par jour) à partir du solde `start`.
+ * `end` : solde en fin de mois ; `overdraftDay` : premier jour sous zéro (null si jamais).
+ * Le même jour, les débits passent avant les crédits : on prévient au plus tôt.
+ */
+export function projectMonth(
+	start: number,
+	movements: { day: number; amount: number }[],
+	today: number
+) {
+	let balance = start;
+	let overdraftDay = start < 0 ? today : null;
+	for (const m of [...movements].sort((x, y) => x.day - y.day || x.amount - y.amount)) {
+		balance += m.amount;
+		if (balance < 0 && overdraftDay === null) overdraftDay = m.day;
+	}
+	return { end: balance, overdraftDay };
 }
 
 /**
