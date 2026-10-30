@@ -2,7 +2,7 @@
 	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
 	import FormModal from '$lib/FormModal.svelte';
-	import { fmt, typeLabels } from '$lib/format';
+	import { fmt, total, typeLabels } from '$lib/format';
 
 	type Transfer = PageData['transfers'][number];
 
@@ -98,6 +98,14 @@
 					</tr>
 				{/each}
 			</tbody>
+			<tfoot>
+				<tr>
+					<td>Total</td>
+					<td colspan="2"></td>
+					<td class="amount">{fmt(total(data.transfers.map((t: Transfer) => t.amount)))} €</td>
+					<td colspan="2"></td>
+				</tr>
+			</tfoot>
 		</table>
 	{/if}
 </section>

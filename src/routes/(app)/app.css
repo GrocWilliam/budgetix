@@ -87,6 +87,12 @@
 	border-bottom: 1px solid #2e3255;
 	vertical-align: middle;
 }
+/* Ligne de total en pied de tableau */
+:where(.app-shell > main) tfoot td {
+	font-weight: 600;
+	border-top: 2px solid #2e3255;
+	border-bottom: none;
+}
 :where(.app-shell > main) th {
 	color: #7aa2f7;
 	font-size: 0.8rem;

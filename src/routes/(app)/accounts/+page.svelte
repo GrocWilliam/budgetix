@@ -2,7 +2,7 @@
 	import type { PageData, ActionData } from './$types';
 	import { enhance } from '$app/forms';
 	import FormModal from '$lib/FormModal.svelte';
-	import { typeLabels } from '$lib/format';
+	import { total, typeLabels } from '$lib/format';
 
 	type Account = PageData['owned'][number];
 
@@ -165,6 +165,24 @@
 					{/if}
 				{/each}
 			</tbody>
+			<tfoot>
+				<tr>
+					<td>Total</td>
+					<td></td>
+					<td>{total(data.owned.map((a: Account) => a.initialBalance)).toFixed(2)} €</td>
+					<td>
+						<!-- Somme des seuls comptes dont le solde actuel est saisi -->
+						{#if data.owned.some((a: Account) => a.currentBalance != null)}
+							<span class="current-balance"
+								>{total(data.owned.map((a: Account) => a.currentBalance)).toFixed(2)} €</span
+							>
+						{:else}
+							<span class="muted">—</span>
+						{/if}
+					</td>
+					<td colspan="2"></td>
+				</tr>
+			</tfoot>
 		</table>
 	{/if}
 </section>
@@ -195,6 +213,14 @@
 					</tr>
 				{/each}
 			</tbody>
+			<tfoot>
+				<tr>
+					<td>Total</td>
+					<td></td>
+					<td>{total(data.shared.map((a: Account) => a.initialBalance)).toFixed(2)} €</td>
+					<td></td>
+				</tr>
+			</tfoot>
 		</table>
 	</section>
 {/if}

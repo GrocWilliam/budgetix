@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
 	import FormModal from '$lib/FormModal.svelte';
+	import { total } from '$lib/format';
 
 	type Income = PageData['incomes'][number];
 	type Account = PageData['accounts'][number];
@@ -88,6 +89,13 @@
 					</tr>
 				{/each}
 			</tbody>
+			<tfoot>
+				<tr>
+					<td>Total</td>
+					<td class="amount">+{total(visible.map((i: Income) => i.amount)).toFixed(2)} €</td>
+					<td colspan="2"></td>
+				</tr>
+			</tfoot>
 		</table>
 	{/if}
 </section>
