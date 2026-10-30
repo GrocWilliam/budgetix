@@ -1,7 +1,8 @@
-FROM node:22-alpine
+FROM node:26-alpine
 
 # Version de pnpm lue depuis "packageManager" dans package.json
-RUN corepack enable
+# (corepack n'est plus livré avec Node depuis la v25)
+RUN npm install -g corepack && corepack enable
 
 WORKDIR /app
 
