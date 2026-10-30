@@ -7,7 +7,7 @@ import {
 	getLinkedUsers,
 	acceptLinkRequest,
 	declineLinkRequest
-} from '$lib/server/budget';
+} from '$lib/server/links';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;

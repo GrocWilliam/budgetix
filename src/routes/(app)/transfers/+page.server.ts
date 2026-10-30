@@ -4,9 +4,9 @@ import {
 	getTransfers,
 	createTransfer,
 	updateTransfer,
-	deleteTransfer,
-	getAccessibleAccounts
-} from '$lib/server/budget';
+	deleteTransfer
+} from '$lib/server/transfers';
+import { getAccessibleAccounts } from '$lib/server/accounts';
 import { isPositiveAmount, isDay } from '$lib/server/rules';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -19,77 +19,43 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return { transfers, accounts, currentUserId: userId };
 };
 
+function parseTransfer(fd: FormData) {
+	const data = {
+		fromAccountId: Number(fd.get('fromAccountId')),
+		toAccountId: Number(fd.get('toAccountId')),
+		label: (fd.get('label') as string)?.trim(),
+		amount: fd.get('amount') as string,
+		dayOfMonth: Number(fd.get('dayOfMonth'))
+	};
+	return data.label && isPositiveAmount(data.amount) && isDay(data.dayOfMonth) ? data : null;
+}
+
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
-		const userId = locals.user!.id;
-		const fd = await request.formData();
-		const fromAccountId = parseInt(fd.get('fromAccountId') as string);
-		const toAccountId = parseInt(fd.get('toAccountId') as string);
-		const label = (fd.get('label') as string)?.trim();
-		const amount = fd.get('amount') as string;
-		const dayOfMonth = parseInt(fd.get('dayOfMonth') as string);
-
-		if (
-			!label ||
-			!isPositiveAmount(amount) ||
-			!isDay(dayOfMonth) ||
-			isNaN(fromAccountId) ||
-			isNaN(toAccountId)
-		) {
-			return fail(400, { error: 'Tous les champs sont requis.' });
-		}
-
+		const data = parseTransfer(await request.formData());
+		if (!data) return fail(400, { message: 'Données invalides.' });
 		try {
-			await createTransfer(userId, {
-				fromAccountId,
-				toAccountId,
-				label,
-				amount,
-				dayOfMonth
-			});
-		} catch (e: unknown) {
-			return fail(400, { error: (e as Error).message });
+			await createTransfer(locals.user!.id, data);
+		} catch (e) {
+			return fail(400, { message: (e as Error).message });
 		}
-
 		return { success: true };
 	},
 
 	delete: async ({ request, locals }) => {
-		const userId = locals.user!.id;
 		const fd = await request.formData();
-		const id = parseInt(fd.get('id') as string);
-		if (isNaN(id)) return fail(400, { error: 'ID invalide.' });
-
-		await deleteTransfer(userId, id);
+		await deleteTransfer(locals.user!.id, Number(fd.get('id')));
 		return { success: true };
 	},
 
 	update: async ({ request, locals }) => {
-		const userId = locals.user!.id;
 		const fd = await request.formData();
-		const id = parseInt(fd.get('id') as string);
-		const fromAccountId = parseInt(fd.get('fromAccountId') as string);
-		const toAccountId = parseInt(fd.get('toAccountId') as string);
-		const label = (fd.get('label') as string)?.trim();
-		const amount = fd.get('amount') as string;
-		const dayOfMonth = parseInt(fd.get('dayOfMonth') as string);
-
-		if (
-			isNaN(id) ||
-			!label ||
-			!isPositiveAmount(amount) ||
-			!isDay(dayOfMonth) ||
-			isNaN(fromAccountId) ||
-			isNaN(toAccountId) ||
-			fromAccountId === toAccountId
-		) {
-			return fail(400, { error: 'Données invalides.' });
-		}
-
+		const data = parseTransfer(fd);
+		if (!data) return fail(400, { message: 'Données invalides.' });
 		try {
-			await updateTransfer(userId, id, { fromAccountId, toAccountId, label, amount, dayOfMonth });
-		} catch (e: unknown) {
-			return fail(400, { error: (e as Error).message });
+			await updateTransfer(locals.user!.id, Number(fd.get('id')), data);
+		} catch (e) {
+			return fail(400, { message: (e as Error).message });
 		}
 		return { success: true };
 	}

@@ -115,44 +115,6 @@
 		margin-bottom: 1.5rem;
 		font-size: 0.9rem;
 	}
-	.card {
-		background: #24283b;
-		border-radius: 10px;
-		padding: 1.5rem;
-		margin-bottom: 1.5rem;
-	}
-	.form-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 1rem;
-		align-items: flex-end;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		font-size: 0.875rem;
-		color: #a9b1d6;
-	}
-	input {
-		padding: 0.4rem 0.6rem;
-		border-radius: 6px;
-		border: 1px solid #414868;
-		background: #1a1b26;
-		color: #c0caf5;
-		min-width: 240px;
-	}
-	button[type='submit'] {
-		padding: 0.5rem 1rem;
-		background: #7aa2f7;
-		color: #1a1b26;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 600;
-		align-self: flex-end;
-	}
-
 	.request-list {
 		list-style: none;
 		margin: 0;
@@ -180,7 +142,6 @@
 		color: #6c7086;
 		font-size: 0.85rem;
 	}
-
 	.actions {
 		display: flex;
 		gap: 0.5rem;
@@ -204,7 +165,6 @@
 		cursor: pointer;
 		font-size: 0.85rem;
 	}
-
 	.badge {
 		font-size: 0.75rem;
 		padding: 0.1rem 0.5rem;
@@ -223,13 +183,12 @@
 		background: #f7768e;
 		color: #1a1b26;
 	}
-
 	.error {
 		color: #f7768e;
 		font-size: 0.85rem;
 		margin-top: 0.5rem;
 	}
-	.empty {
-		color: #6c7086;
+	input {
+		min-width: 240px;
 	}
 </style>

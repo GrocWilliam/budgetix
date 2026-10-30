@@ -12,7 +12,17 @@ import {
 	bankAccountShare,
 	userLink
 } from './db/schema';
-import * as budget from './budget';
+import { shareAccount } from './accounts';
+import {
+	createExpense,
+	deleteExpense,
+	getExpensesWithShares,
+	toggleExpenseRealized,
+	updateExpense
+} from './expenses';
+import { createIncome } from './incomes';
+import { declineLinkRequest } from './links';
+import { createTransfer } from './transfers';
 
 // Nécessite une base Postgres jetable et migrée :
 //   DATABASE_URL=postgres://… pnpm db:migrate && DATABASE_URL=postgres://… pnpm test
@@ -37,7 +47,7 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 			await newAccount(b, 'personal')
 		];
 		expA = (
-			await budget.createExpense(a, {
+			await createExpense(a, {
 				bankAccountId: accA,
 				label: 'Loyer',
 				amount: '800',
@@ -52,25 +62,25 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 		!!(await getDb().query.expense.findFirst({ where: eq(expense.id, id) }));
 
 	test('B ne voit, ne modifie ni ne supprime les dépenses de A', async () => {
-		assert.ok(!(await budget.getExpensesWithShares(b)).some((e) => e.id === expA));
-		await budget.deleteExpense(b, expA);
-		await budget.toggleExpenseRealized(b, expA, true);
+		assert.ok(!(await getExpensesWithShares(b)).some((e) => e.id === expA));
+		await deleteExpense(b, expA);
+		await toggleExpenseRealized(b, expA, true);
 		assert.ok(await expenseExists(expA));
 		assert.equal(
 			(await getDb().query.expense.findFirst({ where: eq(expense.id, expA) }))!.realizedMonth,
 			null
 		);
 		await assert.rejects(
-			budget.updateExpense(b, expA, { bankAccountId: accA, label: 'x', amount: '1', dayOfMonth: 1 })
+			updateExpense(b, expA, { bankAccountId: accA, label: 'x', amount: '1', dayOfMonth: 1 })
 		);
 	});
 
 	test('B n’écrit pas sur les comptes de A', async () => {
 		const data = { bankAccountId: accA, label: 'x', amount: '1', dayOfMonth: 1 };
-		await assert.rejects(budget.createIncome(b, data));
-		await assert.rejects(budget.createExpense(b, { ...data, isShared: false, isProrata: false }));
+		await assert.rejects(createIncome(b, data));
+		await assert.rejects(createExpense(b, { ...data, isShared: false, isProrata: false }));
 		await assert.rejects(
-			budget.createTransfer(b, {
+			createTransfer(b, {
 				fromAccountId: accB,
 				toAccountId: accA,
 				label: 'x',
@@ -85,14 +95,14 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 			.insert(userLink)
 			.values({ requesterId: a, receiverId: b, status: 'accepted' })
 			.returning();
-		await budget.shareAccount(a, commonA, b);
-		await budget.createIncome(b, {
+		await shareAccount(a, commonA, b);
+		await createIncome(b, {
 			bankAccountId: commonA,
 			label: 'Apport',
 			amount: '100',
 			dayOfMonth: 1
 		});
-		await budget.createTransfer(b, {
+		await createTransfer(b, {
 			fromAccountId: accB,
 			toAccountId: commonA,
 			label: 'Loyer',
@@ -100,7 +110,7 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 			dayOfMonth: 1
 		});
 		// B en double : ne doit être compté qu'une fois
-		const shared = await budget.createExpense(a, {
+		const shared = await createExpense(a, {
 			bankAccountId: commonA,
 			label: 'Courses',
 			amount: '300',
@@ -123,7 +133,7 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 			].sort()
 		);
 
-		await budget.declineLinkRequest(a, link.id);
+		await declineLinkRequest(a, link.id);
 
 		assert.equal(
 			(

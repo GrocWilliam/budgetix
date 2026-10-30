@@ -6,9 +6,9 @@ import {
 	updateAccount,
 	deleteAccount,
 	shareAccount,
-	unshareAccount,
-	getLinkedUsers
-} from '$lib/server/budget';
+	unshareAccount
+} from '$lib/server/accounts';
+import { getLinkedUsers } from '$lib/server/links';
 import { isAccountType, isAmount } from '$lib/server/rules';
 
 export const load: PageServerLoad = async ({ locals }) => {

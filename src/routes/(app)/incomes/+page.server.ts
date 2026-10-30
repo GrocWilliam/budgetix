@@ -1,12 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import {
-	getIncomes,
-	createIncome,
-	updateIncome,
-	deleteIncome,
-	getAccessibleAccounts
-} from '$lib/server/budget';
+import { getIncomes, createIncome, updateIncome, deleteIncome } from '$lib/server/incomes';
+import { getAccessibleAccounts } from '$lib/server/accounts';
 import { isPositiveAmount, isDay } from '$lib/server/rules';
 
 function parseIncome(fd: FormData) {

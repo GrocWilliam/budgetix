@@ -1,1 +1,40 @@
-@import 'tailwindcss';
+/* Remise à zéro de base : reprend la partie du preflight Tailwind sur laquelle les pages ont été construites */
+@layer base {
+	*,
+	::before,
+	::after {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+		border: 0 solid;
+	}
+	html {
+		line-height: 1.5;
+		font-family: ui-sans-serif, system-ui, sans-serif;
+	}
+	h1,
+	h2,
+	h3 {
+		font-size: inherit;
+		font-weight: inherit;
+	}
+	a {
+		color: inherit;
+		text-decoration: inherit;
+	}
+	ul {
+		list-style: none;
+	}
+	button,
+	input,
+	select {
+		font: inherit;
+		color: inherit;
+		border-radius: 0;
+		background-color: transparent;
+	}
+	::placeholder {
+		opacity: 1;
+		color: color-mix(in oklab, currentcolor 50%, transparent);
+	}
+}

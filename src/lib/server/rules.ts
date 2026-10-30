@@ -1,5 +1,9 @@
 // Règles pures (sans DB), testées dans rules.test.ts
 
+/** Somme des montants (numeric renvoyé en string par Postgres) */
+export const sum = (rows: { amount: string }[]) =>
+	rows.reduce((s, r) => s + parseFloat(r.amount), 0);
+
 export const ACCOUNT_TYPES = ['personal', 'savings', 'common'] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 

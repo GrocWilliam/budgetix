@@ -1,0 +1,144 @@
+/* Styles communs aux pages de l'app. :where() = spécificité nulle, les styles d'une page gagnent toujours */
+
+:where(.app-shell > main) h1 {
+	margin-bottom: 1.5rem;
+}
+:where(.app-shell > main) .card {
+	background: #24283b;
+	border-radius: 10px;
+	padding: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+:where(.app-shell > main) .form-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	align-items: flex-end;
+}
+:where(.app-shell > main) label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.875rem;
+	color: #a9b1d6;
+}
+:where(.app-shell > main) input,
+:where(.app-shell > main) select {
+	padding: 0.4rem 0.6rem;
+	border-radius: 6px;
+	border: 1px solid #414868;
+	background: #1a1b26;
+	color: #c0caf5;
+}
+:where(.app-shell > main) button[type='submit'] {
+	padding: 0.5rem 1rem;
+	background: #7aa2f7;
+	color: #1a1b26;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+}
+/* button.x (et non .x) pour l'emporter sur button[type='submit'] ci-dessus */
+:where(.app-shell > main) button.btn-danger,
+:where(.app-shell > main) button.btn-edit {
+	padding: 0.3rem 0.7rem;
+	background: #f7768e;
+	color: #1a1b26;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.8rem;
+}
+:where(.app-shell > main) button.btn-edit {
+	background: #7aa2f7;
+	font-weight: 600;
+}
+:where(.app-shell > main) .btn-cancel {
+	padding: 0.4rem 0.9rem;
+	background: #414868;
+	color: #c0caf5;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.875rem;
+}
+:where(.app-shell > main) table {
+	width: 100%;
+	border-collapse: collapse;
+}
+:where(.app-shell > main) th,
+:where(.app-shell > main) td {
+	padding: 0.6rem 0.75rem;
+	text-align: left;
+	border-bottom: 1px solid #2e3255;
+	vertical-align: middle;
+}
+:where(.app-shell > main) th {
+	color: #7aa2f7;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+}
+:where(.app-shell > main) .actions-cell {
+	display: flex;
+	gap: 0.4rem;
+	align-items: center;
+}
+:where(.app-shell > main) .empty {
+	color: #6c7086;
+}
+:where(.app-shell > main) .error {
+	color: #f7768e;
+	font-size: 0.9rem;
+	margin-bottom: 0.75rem;
+}
+
+/* Onglets par compte (revenus, dépenses) : la couleur active est définie par la page */
+:where(.app-shell > main) .tabs {
+	display: flex;
+	gap: 0.25rem;
+	flex-wrap: wrap;
+	margin-bottom: 1rem;
+	border-bottom: 2px solid #2e3255;
+}
+:where(.app-shell > main) .tab {
+	padding: 0.4rem 1rem;
+	background: none;
+	border: none;
+	border-bottom: 3px solid transparent;
+	color: #6c7086;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 600;
+	transition:
+		color 0.15s,
+		border-color 0.15s;
+	margin-bottom: -2px;
+}
+:where(.app-shell > main) .tab:hover {
+	color: #c0caf5;
+}
+
+/* Ligne d'édition dépliée sous une ligne de tableau */
+:where(.app-shell > main) .edit-row td {
+	background: #1e2030;
+	padding: 0;
+	border-bottom: 2px solid #7aa2f7;
+}
+:where(.app-shell > main) .edit-fields {
+	padding: 1rem 1.5rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	align-items: flex-end;
+}
+:where(.app-shell > main) .edit-actions {
+	display: flex;
+	gap: 0.5rem;
+	align-self: flex-end;
+}
+:where(.app-shell > main) .edit-actions button[type='submit'] {
+	padding: 0.4rem 0.9rem;
+	background: #9ece6a;
+	font-size: 0.875rem;
+}

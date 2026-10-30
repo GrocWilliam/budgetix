@@ -1,23 +1,14 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { fmt, typeLabels } from '$lib/format';
 
 	let { data } = $props<{ data: PageData }>();
-
-	const typeLabels: Record<string, string> = {
-		personal: 'Personnel',
-		savings: 'Épargne',
-		common: 'Commun'
-	};
 
 	const typeColors: Record<string, string> = {
 		personal: '#7aa2f7',
 		savings: '#9ece6a',
 		common: '#bb9af7'
 	};
-
-	function fmt(n: number) {
-		return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-	}
 </script>
 
 <h1>Tableau de bord</h1>
@@ -151,10 +142,6 @@
 </div>
 
 <style>
-	h1 {
-		margin-bottom: 1.5rem;
-	}
-
 	.total-card {
 		background: #24283b;
 		border-radius: 10px;
@@ -302,9 +289,6 @@
 		letter-spacing: 0.04em;
 	}
 
-	.empty {
-		color: #6c7086;
-	}
 	.empty a {
 		color: #7aa2f7;
 	}

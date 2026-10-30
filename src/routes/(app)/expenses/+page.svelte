@@ -25,6 +25,34 @@
 	);
 </script>
 
+<!-- Champs communs au formulaire d'ajout (exp = null) et d'édition -->
+{#snippet fields(exp: Expense | null)}
+	<label>
+		Libellé
+		<input name="label" required placeholder="Loyer, Internet…" value={exp?.label ?? ''} />
+	</label>
+	<label>
+		Compte
+		<select name="bankAccountId" required>
+			{#each data.accounts as acc (acc.id)}
+				<option value={acc.id} selected={acc.id === exp?.bankAccountId}>{acc.name}</option>
+			{/each}
+		</select>
+	</label>
+	<label>
+		Montant (€)
+		<input name="amount" type="number" step="0.01" min="0" required value={exp?.amount ?? ''} />
+	</label>
+	<label>
+		Catégorie
+		<input name="category" placeholder="Logement, Transport…" value={exp?.category ?? ''} />
+	</label>
+	<label>
+		Jour du mois
+		<input name="dayOfMonth" type="number" min="1" max="31" required value={exp?.dayOfMonth ?? 1} />
+	</label>
+{/snippet}
+
 <h1>Dépenses</h1>
 
 {#if form?.message}
@@ -35,30 +63,7 @@
 	<h2>Ajouter une dépense récurrente</h2>
 	<form method="POST" action="?/create" use:enhance>
 		<div class="form-row">
-			<label>
-				Libellé
-				<input name="label" required placeholder="Loyer, Internet…" />
-			</label>
-			<label>
-				Compte
-				<select name="bankAccountId" required>
-					{#each data.accounts as acc (acc.id)}
-						<option value={acc.id}>{acc.name}</option>
-					{/each}
-				</select>
-			</label>
-			<label>
-				Montant (€)
-				<input name="amount" type="number" step="0.01" min="0" required />
-			</label>
-			<label>
-				Catégorie
-				<input name="category" placeholder="Logement, Transport…" />
-			</label>
-			<label>
-				Jour du mois
-				<input name="dayOfMonth" type="number" min="1" max="31" value="1" required />
-			</label>
+			{@render fields(null)}
 			<label class="inline">
 				<input type="checkbox" name="isShared" bind:checked={isShared} />
 				Dépense commune
@@ -170,7 +175,7 @@
 								</button>
 							</form>
 						</td>
-						<td>
+						<td class="actions-cell">
 							<button
 								class="btn-edit"
 								onclick={() => (editingId = editingId === exp.id ? null : exp.id)}>Éditer</button
@@ -195,46 +200,7 @@
 								>
 									<input type="hidden" name="id" value={exp.id} />
 									<div class="edit-fields">
-										<label>
-											Libellé
-											<input name="label" required value={exp.label} />
-										</label>
-										<label>
-											Compte
-											<select name="bankAccountId">
-												{#each data.accounts as acc (acc.id)}
-													<option value={acc.id} selected={acc.id === exp.bankAccountId}
-														>{acc.name}</option
-													>
-												{/each}
-											</select>
-										</label>
-										<label>
-											Montant (€)
-											<input
-												name="amount"
-												type="number"
-												step="0.01"
-												min="0"
-												required
-												value={parseFloat(exp.amount)}
-											/>
-										</label>
-										<label>
-											Catégorie
-											<input name="category" value={exp.category ?? ''} placeholder="Logement…" />
-										</label>
-										<label>
-											Jour du mois
-											<input
-												name="dayOfMonth"
-												type="number"
-												min="1"
-												max="31"
-												required
-												value={exp.dayOfMonth}
-											/>
-										</label>
+										{@render fields(exp)}
 										<div class="edit-actions">
 											<button type="submit">Enregistrer</button>
 											<button type="button" class="btn-cancel" onclick={() => (editingId = null)}
@@ -253,32 +219,11 @@
 </section>
 
 <style>
-	.error {
-		color: #f7768e;
-		font-size: 0.9rem;
-		margin-bottom: 0.75rem;
+	form[action='?/create'] button[type='submit'] {
+		background: #f7768e;
 	}
-	h1 {
-		margin-bottom: 1.5rem;
-	}
-	.card {
-		background: #24283b;
-		border-radius: 10px;
-		padding: 1.5rem;
-		margin-bottom: 1.5rem;
-	}
-	.form-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 1rem;
-		align-items: flex-end;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		font-size: 0.875rem;
-		color: #a9b1d6;
+	td {
+		vertical-align: top;
 	}
 	label.inline {
 		flex-direction: row;
@@ -287,51 +232,17 @@
 		align-self: flex-end;
 		padding-bottom: 0.5rem;
 	}
-	input,
-	select {
-		padding: 0.4rem 0.6rem;
-		border-radius: 6px;
-		border: 1px solid #414868;
-		background: #1a1b26;
-		color: #c0caf5;
-	}
-	button[type='submit'] {
-		padding: 0.5rem 1rem;
-		background: #f7768e;
-		color: #1a1b26;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 600;
-	}
-	.btn-danger {
-		padding: 0.3rem 0.7rem;
-		background: #f7768e;
-		color: #1a1b26;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.8rem;
-	}
-	table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-	th,
-	td {
-		padding: 0.6rem 0.75rem;
-		text-align: left;
-		border-bottom: 1px solid #2e3255;
-		vertical-align: top;
-	}
-	th {
-		color: #7aa2f7;
-		font-size: 0.8rem;
-		text-transform: uppercase;
-	}
 	.amount {
 		color: #f7768e;
 		font-weight: 600;
+	}
+	.amount.realized {
+		text-decoration: line-through;
+		color: #6c7086;
+	}
+	.tab.active {
+		color: #f7768e;
+		border-bottom-color: #f7768e;
 	}
 	.badge {
 		background: #bb9af7;
@@ -383,38 +294,6 @@
 		align-items: center;
 		gap: 0.5rem;
 	}
-	.empty {
-		color: #6c7086;
-	}
-	.tabs {
-		display: flex;
-		gap: 0.25rem;
-		flex-wrap: wrap;
-		margin-bottom: 1rem;
-		border-bottom: 2px solid #2e3255;
-		padding-bottom: 0;
-	}
-	.tab {
-		padding: 0.4rem 1rem;
-		background: none;
-		border: none;
-		border-bottom: 3px solid transparent;
-		color: #6c7086;
-		cursor: pointer;
-		font-size: 0.875rem;
-		font-weight: 600;
-		transition:
-			color 0.15s,
-			border-color 0.15s;
-		margin-bottom: -2px;
-	}
-	.tab:hover {
-		color: #c0caf5;
-	}
-	.tab.active {
-		color: #f7768e;
-		border-bottom-color: #f7768e;
-	}
 	.warn {
 		color: #e0af68;
 		font-size: 0.9rem;
@@ -422,53 +301,6 @@
 	}
 	.warn a {
 		color: #7aa2f7;
-	}
-	.btn-edit {
-		padding: 0.3rem 0.7rem;
-		background: #7aa2f7;
-		color: #1a1b26;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.8rem;
-		font-weight: 600;
-		margin-right: 0.3rem;
-	}
-	.edit-row td {
-		background: #1e2030;
-		padding: 0;
-		border-bottom: 2px solid #7aa2f7;
-	}
-	.edit-fields {
-		padding: 1rem 1.5rem;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		align-items: flex-end;
-	}
-	.edit-actions {
-		display: flex;
-		gap: 0.5rem;
-		align-self: flex-end;
-	}
-	.edit-actions button[type='submit'] {
-		padding: 0.4rem 0.9rem;
-		background: #9ece6a;
-		color: #1a1b26;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 600;
-		font-size: 0.875rem;
-	}
-	.btn-cancel {
-		padding: 0.4rem 0.9rem;
-		background: #414868;
-		color: #c0caf5;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.875rem;
 	}
 	.btn-realized {
 		background: none;
@@ -488,9 +320,5 @@
 		background: #9ece6a22;
 		border-color: #9ece6a;
 		color: #9ece6a;
-	}
-	.amount.realized {
-		text-decoration: line-through;
-		color: #6c7086;
 	}
 </style>
