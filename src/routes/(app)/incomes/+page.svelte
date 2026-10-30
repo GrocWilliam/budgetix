@@ -1,13 +1,15 @@
 <script lang="ts">
-	import type { ActionData, PageData } from './$types';
+	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
+	import FormModal from '$lib/FormModal.svelte';
 
 	type Income = PageData['incomes'][number];
 	type Account = PageData['accounts'][number];
 
-	let { data, form } = $props<{ data: PageData; form: ActionData }>();
+	let { data } = $props<{ data: PageData }>();
 
-	let editingId = $state<number | null>(null);
+	let adding = $state(false);
+	let editing = $state<Income | null>(null);
 	let activeTab = $state<number | null>(null);
 
 	const accountTabs = $derived(
@@ -47,21 +49,10 @@
 	</label>
 {/snippet}
 
-<h1>Revenus</h1>
-
-{#if form?.message}
-	<p class="error">{form.message}</p>
-{/if}
-
-<section class="card">
-	<h2>Ajouter un revenu récurrent</h2>
-	<form method="POST" action="?/create" use:enhance>
-		<div class="form-row">
-			{@render fields(null)}
-			<button type="submit">Ajouter</button>
-		</div>
-	</form>
-</section>
+<div class="page-header">
+	<h1>Revenus</h1>
+	<button class="btn-add" onclick={() => (adding = true)}>+ Ajouter un revenu</button>
+</div>
 
 <section class="card">
 	<h2>Mes revenus</h2>
@@ -88,50 +79,43 @@
 						<td class="amount">+{parseFloat(inc.amount).toFixed(2)} €</td>
 						<td>Le {inc.dayOfMonth}</td>
 						<td class="actions-cell">
-							<button
-								class="btn-edit"
-								onclick={() => (editingId = editingId === inc.id ? null : inc.id)}>Éditer</button
-							>
+							<button class="btn-edit" onclick={() => (editing = inc)}>Éditer</button>
 							<form method="POST" action="?/delete" use:enhance>
 								<input type="hidden" name="id" value={inc.id} />
 								<button type="submit" class="btn-danger">Supprimer</button>
 							</form>
 						</td>
 					</tr>
-					{#if editingId === inc.id}
-						<tr class="edit-row">
-							<td colspan="4">
-								<form
-									method="POST"
-									action="?/update"
-									use:enhance={() =>
-										async ({ update }) => {
-											await update();
-											editingId = null;
-										}}
-								>
-									<input type="hidden" name="id" value={inc.id} />
-									<div class="edit-fields">
-										{@render fields(inc)}
-										<div class="edit-actions">
-											<button type="submit">Enregistrer</button>
-											<button type="button" class="btn-cancel" onclick={() => (editingId = null)}
-												>Annuler</button
-											>
-										</div>
-									</div>
-								</form>
-							</td>
-						</tr>
-					{/if}
 				{/each}
 			</tbody>
 		</table>
 	{/if}
 </section>
 
+<FormModal
+	open={adding}
+	onclose={() => (adding = false)}
+	title="Ajouter un revenu récurrent"
+	action="?/create"
+	submitLabel="Ajouter"
+>
+	{@render fields(null)}
+</FormModal>
+
+<FormModal
+	open={editing !== null}
+	onclose={() => (editing = null)}
+	title="Modifier"
+	action="?/update"
+>
+	{#if editing}
+		<input type="hidden" name="id" value={editing.id} />
+		{@render fields(editing)}
+	{/if}
+</FormModal>
+
 <style>
-	form[action='?/create'] button[type='submit'] {
+	.btn-add {
 		background: #9ece6a;
 	}
 	.amount {

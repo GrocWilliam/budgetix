@@ -3,17 +3,30 @@
 :where(.app-shell > main) h1 {
 	margin-bottom: 1.5rem;
 }
+/* Titre de page + bouton d'ouverture du formulaire d'ajout (modale) */
+:where(.app-shell > main) .page-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+:where(.app-shell > main) .page-header h1 {
+	margin: 0;
+}
+:where(.app-shell > main) .btn-add {
+	padding: 0.5rem 1rem;
+	background: #7aa2f7;
+	color: #1a1b26;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+}
 :where(.app-shell > main) .card {
 	background: #24283b;
 	border-radius: 10px;
 	padding: 1.5rem;
 	margin-bottom: 1.5rem;
-}
-:where(.app-shell > main) .form-row {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;
-	align-items: flex-end;
 }
 :where(.app-shell > main) label {
 	display: flex;
@@ -117,28 +130,4 @@
 }
 :where(.app-shell > main) .tab:hover {
 	color: #c0caf5;
-}
-
-/* Ligne d'édition dépliée sous une ligne de tableau */
-:where(.app-shell > main) .edit-row td {
-	background: #1e2030;
-	padding: 0;
-	border-bottom: 2px solid #7aa2f7;
-}
-:where(.app-shell > main) .edit-fields {
-	padding: 1rem 1.5rem;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.75rem;
-	align-items: flex-end;
-}
-:where(.app-shell > main) .edit-actions {
-	display: flex;
-	gap: 0.5rem;
-	align-self: flex-end;
-}
-:where(.app-shell > main) .edit-actions button[type='submit'] {
-	padding: 0.4rem 0.9rem;
-	background: #9ece6a;
-	font-size: 0.875rem;
 }

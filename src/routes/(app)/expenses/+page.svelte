@@ -1,15 +1,17 @@
 <script lang="ts">
-	import type { ActionData, PageData } from './$types';
+	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
+	import FormModal from '$lib/FormModal.svelte';
 
 	type Expense = PageData['expenses'][number];
 	type Account = PageData['accounts'][number];
 
-	let { data, form } = $props<{ data: PageData; form: ActionData }>();
+	let { data } = $props<{ data: PageData }>();
 
 	let isShared = $state(false);
 	let isProrata = $state(false);
-	let editingId = $state<number | null>(null);
+	let adding = $state(false);
+	let editing = $state<Expense | null>(null);
 	let activeTab = $state<number | null>(null);
 
 	const accountTabs = $derived(
@@ -53,71 +55,10 @@
 	</label>
 {/snippet}
 
-<h1>Dépenses</h1>
-
-{#if form?.message}
-	<p class="error">{form.message}</p>
-{/if}
-
-<section class="card">
-	<h2>Ajouter une dépense récurrente</h2>
-	<form method="POST" action="?/create" use:enhance>
-		<div class="form-row">
-			{@render fields(null)}
-			<label class="inline">
-				<input type="checkbox" name="isShared" bind:checked={isShared} />
-				Dépense commune
-			</label>
-			{#if isShared}
-				<label class="inline">
-					<input type="checkbox" name="isProrata" bind:checked={isProrata} />
-					Prorata des revenus personnels
-				</label>
-			{/if}
-		</div>
-
-		{#if isShared}
-			{#if data.linkedUsers.length === 0}
-				<p class="warn">
-					Aucun utilisateur lié. <a href="/links">Envoyer une demande de liaison →</a>
-				</p>
-			{:else if isProrata}
-				<div class="prorata-info">
-					<span class="badge badge--prorata">Prorata</span>
-					La répartition sera calculée automatiquement selon les revenus personnels de chaque participant.
-					<div class="participants" style="margin-top:0.5rem">
-						{#each data.linkedUsers as u (u.id)}
-							<input type="hidden" name="participantId" value={u.id} />
-						{/each}
-					</div>
-				</div>
-			{:else}
-				<div class="participants">
-					<h3>Répartition</h3>
-					{#each data.linkedUsers as u (u.id)}
-						<div class="participant-row">
-							<span>{u.name} ({u.email})</span>
-							<input type="hidden" name="participantId" value={u.id} />
-							<label class="share-label">
-								Part (%)
-								<input
-									name="participantShare"
-									type="number"
-									step="0.01"
-									min="0"
-									max="100"
-									value={Math.floor(100 / (data.linkedUsers.length + 1))}
-								/>
-							</label>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		{/if}
-
-		<button type="submit" style="margin-top:1rem">Ajouter</button>
-	</form>
-</section>
+<div class="page-header">
+	<h1>Dépenses</h1>
+	<button class="btn-add" onclick={() => (adding = true)}>+ Ajouter une dépense</button>
+</div>
 
 <section class="card">
 	<h2>Mes dépenses</h2>
@@ -176,50 +117,91 @@
 							</form>
 						</td>
 						<td class="actions-cell">
-							<button
-								class="btn-edit"
-								onclick={() => (editingId = editingId === exp.id ? null : exp.id)}>Éditer</button
-							>
+							<button class="btn-edit" onclick={() => (editing = exp)}>Éditer</button>
 							<form method="POST" action="?/delete" use:enhance>
 								<input type="hidden" name="id" value={exp.id} />
 								<button type="submit" class="btn-danger">Supprimer</button>
 							</form>
 						</td>
 					</tr>
-					{#if editingId === exp.id}
-						<tr class="edit-row">
-							<td colspan="7">
-								<form
-									method="POST"
-									action="?/update"
-									use:enhance={() =>
-										async ({ update }) => {
-											await update();
-											editingId = null;
-										}}
-								>
-									<input type="hidden" name="id" value={exp.id} />
-									<div class="edit-fields">
-										{@render fields(exp)}
-										<div class="edit-actions">
-											<button type="submit">Enregistrer</button>
-											<button type="button" class="btn-cancel" onclick={() => (editingId = null)}
-												>Annuler</button
-											>
-										</div>
-									</div>
-								</form>
-							</td>
-						</tr>
-					{/if}
 				{/each}
 			</tbody>
 		</table>
 	{/if}
 </section>
 
+<FormModal
+	open={adding}
+	onclose={() => (adding = false)}
+	title="Ajouter une dépense récurrente"
+	action="?/create"
+	submitLabel="Ajouter"
+>
+	{@render fields(null)}
+	<label class="inline">
+		<input type="checkbox" name="isShared" bind:checked={isShared} />
+		Dépense commune
+	</label>
+	{#if isShared}
+		<label class="inline">
+			<input type="checkbox" name="isProrata" bind:checked={isProrata} />
+			Prorata des revenus personnels
+		</label>
+	{/if}
+	{#if isShared}
+		{#if data.linkedUsers.length === 0}
+			<p class="warn">
+				Aucun utilisateur lié. <a href="/links">Envoyer une demande de liaison →</a>
+			</p>
+		{:else if isProrata}
+			<div class="prorata-info">
+				<span class="badge badge--prorata">Prorata</span>
+				La répartition sera calculée automatiquement selon les revenus personnels de chaque participant.
+				<div class="participants" style="margin-top:0.5rem">
+					{#each data.linkedUsers as u (u.id)}
+						<input type="hidden" name="participantId" value={u.id} />
+					{/each}
+				</div>
+			</div>
+		{:else}
+			<div class="participants">
+				<h3>Répartition</h3>
+				{#each data.linkedUsers as u (u.id)}
+					<div class="participant-row">
+						<span>{u.name} ({u.email})</span>
+						<input type="hidden" name="participantId" value={u.id} />
+						<label class="share-label">
+							Part (%)
+							<input
+								name="participantShare"
+								type="number"
+								step="0.01"
+								min="0"
+								max="100"
+								value={Math.floor(100 / (data.linkedUsers.length + 1))}
+							/>
+						</label>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	{/if}
+</FormModal>
+
+<FormModal
+	open={editing !== null}
+	onclose={() => (editing = null)}
+	title="Modifier"
+	action="?/update"
+>
+	{#if editing}
+		<input type="hidden" name="id" value={editing.id} />
+		{@render fields(editing)}
+	{/if}
+</FormModal>
+
 <style>
-	form[action='?/create'] button[type='submit'] {
+	.btn-add {
 		background: #f7768e;
 	}
 	td {
@@ -229,8 +211,6 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 0.5rem;
-		align-self: flex-end;
-		padding-bottom: 0.5rem;
 	}
 	.amount {
 		color: #f7768e;

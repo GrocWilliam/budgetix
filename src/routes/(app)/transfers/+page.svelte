@@ -1,13 +1,15 @@
 <script lang="ts">
-	import type { PageData, ActionData } from './$types';
+	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
+	import FormModal from '$lib/FormModal.svelte';
 	import { fmt, typeLabels } from '$lib/format';
 
 	type Transfer = PageData['transfers'][number];
 
-	let { data, form } = $props<{ data: PageData; form: ActionData }>();
+	let { data } = $props<{ data: PageData }>();
 
-	let editingId = $state<number | null>(null);
+	let adding = $state(false);
+	let editing = $state<Transfer | null>(null);
 
 	function accountLabel(acc: { name: string; type: string }) {
 		return `${acc.name} (${typeLabels[acc.type] ?? acc.type})`;
@@ -51,20 +53,10 @@
 	</label>
 {/snippet}
 
-<h1>Virements planifiés</h1>
-
-<section class="card">
-	<h2>Nouveau virement récurrent</h2>
-	{#if form?.message}
-		<p class="error">{form.message}</p>
-	{/if}
-	<form method="POST" action="?/create" use:enhance>
-		<div class="form-row">
-			{@render fields(null)}
-		</div>
-		<button type="submit" style="margin-top:1rem">Planifier le virement</button>
-	</form>
-</section>
+<div class="page-header">
+	<h1>Virements planifiés</h1>
+	<button class="btn-add" onclick={() => (adding = true)}>+ Nouveau virement</button>
+</div>
 
 <section class="card">
 	<h2>Virements programmés</h2>
@@ -96,10 +88,7 @@
 						<td>Le {t.dayOfMonth}</td>
 						<td class="actions-cell">
 							{#if t.userId === data.currentUserId}
-								<button
-									class="btn-edit"
-									onclick={() => (editingId = editingId === t.id ? null : t.id)}>Éditer</button
-								>
+								<button class="btn-edit" onclick={() => (editing = t)}>Éditer</button>
 								<form method="POST" action="?/delete" use:enhance>
 									<input type="hidden" name="id" value={t.id} />
 									<button type="submit" class="btn-danger">Supprimer</button>
@@ -107,37 +96,33 @@
 							{/if}
 						</td>
 					</tr>
-					{#if editingId === t.id && t.userId === data.currentUserId}
-						<tr class="edit-row">
-							<td colspan="6">
-								<form
-									method="POST"
-									action="?/update"
-									use:enhance={() =>
-										async ({ update }) => {
-											await update();
-											editingId = null;
-										}}
-								>
-									<input type="hidden" name="id" value={t.id} />
-									<div class="edit-fields">
-										{@render fields(t)}
-										<div class="edit-actions">
-											<button type="submit">Enregistrer</button>
-											<button type="button" class="btn-cancel" onclick={() => (editingId = null)}
-												>Annuler</button
-											>
-										</div>
-									</div>
-								</form>
-							</td>
-						</tr>
-					{/if}
 				{/each}
 			</tbody>
 		</table>
 	{/if}
 </section>
+
+<FormModal
+	open={adding}
+	onclose={() => (adding = false)}
+	title="Nouveau virement récurrent"
+	action="?/create"
+	submitLabel="Ajouter"
+>
+	{@render fields(null)}
+</FormModal>
+
+<FormModal
+	open={editing !== null}
+	onclose={() => (editing = null)}
+	title="Modifier"
+	action="?/update"
+>
+	{#if editing}
+		<input type="hidden" name="id" value={editing.id} />
+		{@render fields(editing)}
+	{/if}
+</FormModal>
 
 <style>
 	.amount {

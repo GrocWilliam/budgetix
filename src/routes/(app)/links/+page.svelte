@@ -1,31 +1,20 @@
 <script lang="ts">
-	import type { PageData, ActionData } from './$types';
+	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
+	import FormModal from '$lib/FormModal.svelte';
 
-	let { data, form } = $props<{ data: PageData; form: ActionData }>();
+	let { data } = $props<{ data: PageData }>();
+
+	let sending = $state(false);
 </script>
 
-<h1>Liaisons</h1>
+<div class="page-header">
+	<h1>Liaisons</h1>
+	<button class="btn-add" onclick={() => (sending = true)}>+ Envoyer une demande</button>
+</div>
 <p class="subtitle">
 	Liez votre compte à celui d'un autre utilisateur pour partager des dépenses communes.
 </p>
-
-<!-- Envoyer une demande -->
-<section class="card">
-	<h2>Envoyer une demande</h2>
-	<form method="POST" action="?/send" use:enhance>
-		<div class="form-row">
-			<label>
-				Email de l'utilisateur
-				<input type="email" name="email" required placeholder="partenaire@exemple.fr" />
-			</label>
-			<button type="submit">Envoyer</button>
-		</div>
-		{#if form?.message}
-			<p class="error">{form.message}</p>
-		{/if}
-	</form>
-</section>
 
 <!-- Demandes reçues -->
 <section class="card">
@@ -106,8 +95,21 @@
 	{/if}
 </section>
 
+<FormModal
+	open={sending}
+	onclose={() => (sending = false)}
+	title="Envoyer une demande"
+	action="?/send"
+	submitLabel="Envoyer"
+>
+	<label>
+		Email de l'utilisateur
+		<input type="email" name="email" required placeholder="partenaire@exemple.fr" />
+	</label>
+</FormModal>
+
 <style>
-	h1 {
+	.page-header {
 		margin-bottom: 0.25rem;
 	}
 	.subtitle {
@@ -182,13 +184,5 @@
 	.badge--declined {
 		background: #f7768e;
 		color: #1a1b26;
-	}
-	.error {
-		color: #f7768e;
-		font-size: 0.85rem;
-		margin-top: 0.5rem;
-	}
-	input {
-		min-width: 240px;
 	}
 </style>

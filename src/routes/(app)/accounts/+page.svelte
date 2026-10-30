@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types';
 	import { enhance } from '$app/forms';
+	import FormModal from '$lib/FormModal.svelte';
 	import { typeLabels } from '$lib/format';
 
 	type Account = PageData['owned'][number];
@@ -9,7 +10,8 @@
 
 	// Suivi du compte dont le panneau de partage est ouvert
 	let sharingAccountId = $state<number | null>(null);
-	let editingId = $state<number | null>(null);
+	let adding = $state(false);
+	let editing = $state<Account | null>(null);
 </script>
 
 <!-- Champs communs au formulaire d'ajout (acc = null) et d'édition -->
@@ -54,18 +56,10 @@
 	</label>
 {/snippet}
 
-<h1>Comptes bancaires</h1>
-
-<!-- Créer un compte -->
-<section class="card">
-	<h2>Ajouter un compte</h2>
-	<form method="POST" action="?/create" use:enhance>
-		<div class="form-row">
-			{@render fields(null)}
-			<button type="submit">Ajouter</button>
-		</div>
-	</form>
-</section>
+<div class="page-header">
+	<h1>Comptes bancaires</h1>
+	<button class="btn-add" onclick={() => (adding = true)}>+ Ajouter un compte</button>
+</div>
 
 <!-- Mes comptes (propriétaire) -->
 <section class="card">
@@ -121,10 +115,7 @@
 							{/if}
 						</td>
 						<td class="actions-cell">
-							<button
-								class="btn-edit"
-								onclick={() => (editingId = editingId === acc.id ? null : acc.id)}>Éditer</button
-							>
+							<button class="btn-edit" onclick={() => (editing = acc)}>Éditer</button>
 							{#if data.linkedUsers.length > 0}
 								<button
 									class="btn-share"
@@ -172,32 +163,6 @@
 							</td>
 						</tr>
 					{/if}
-					{#if editingId === acc.id}
-						<tr class="edit-row">
-							<td colspan="6">
-								<form
-									method="POST"
-									action="?/update"
-									use:enhance={() =>
-										async ({ update }) => {
-											await update();
-											editingId = null;
-										}}
-								>
-									<input type="hidden" name="id" value={acc.id} />
-									<div class="edit-fields">
-										{@render fields(acc)}
-										<div class="edit-actions">
-											<button type="submit">Enregistrer</button>
-											<button type="button" class="btn-cancel" onclick={() => (editingId = null)}
-												>Annuler</button
-											>
-										</div>
-									</div>
-								</form>
-							</td>
-						</tr>
-					{/if}
 				{/each}
 			</tbody>
 		</table>
@@ -239,6 +204,28 @@
 		💡 Aucun utilisateur lié. <a href="/links">Créer une liaison →</a> pour partager vos comptes.
 	</p>
 {/if}
+
+<FormModal
+	open={adding}
+	onclose={() => (adding = false)}
+	title="Ajouter un compte"
+	action="?/create"
+	submitLabel="Ajouter"
+>
+	{@render fields(null)}
+</FormModal>
+
+<FormModal
+	open={editing !== null}
+	onclose={() => (editing = null)}
+	title="Modifier"
+	action="?/update"
+>
+	{#if editing}
+		<input type="hidden" name="id" value={editing.id} />
+		{@render fields(editing)}
+	{/if}
+</FormModal>
 
 <style>
 	.dot {
