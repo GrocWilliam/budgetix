@@ -15,6 +15,7 @@
 		<a href="/expenses">Dépenses</a>
 		<a href="/transfers">Virements</a>
 		<a href="/links">Liaisons</a>
+		<a href="/guide">Guide</a>
 		<div class="spacer"></div>
 		<span class="user-email">{data.user.email}</span>
 		<form method="POST" action="/logout">
