@@ -12,7 +12,8 @@ import {
 	bankAccountShare,
 	userLink
 } from './db/schema';
-import { shareAccount } from './accounts';
+import { getAccessibleAccounts, shareAccount } from './accounts';
+import { getCommonAccountSuggestions, getDashboard } from './dashboard';
 import {
 	createExpense,
 	deleteExpense,
@@ -160,5 +161,76 @@ describe.skipIf(!process.env.DATABASE_URL)('contrôle d’accès entre utilisate
 			await getDb().query.bankAccount.findFirst({ where: eq(bankAccount.id, accB) }),
 			'les comptes de B restent'
 		);
+	});
+
+	test('tableau de bord : solde nul exact, sans « -0,00 »', async () => {
+		const acc = (
+			await getDb()
+				.insert(bankAccount)
+				.values({ userId: a, name: 'Zéro', initialBalance: '100.30' })
+				.returning()
+		)[0].id;
+		for (const amount of ['50.10', '50.20']) {
+			await createExpense(a, {
+				bankAccountId: acc,
+				label: 'x',
+				amount,
+				dayOfMonth: 1,
+				isShared: false,
+				isProrata: false
+			});
+		}
+		const { accounts } = await getDashboard(a, await getAccessibleAccounts(a));
+		const zero = accounts.find((x) => x.id === acc)!;
+		assert.equal(zero.balance, 0);
+		assert.ok(!(zero.balance < 0));
+	});
+
+	test('équilibrage : parts fixes de la dépense, prorata pour le reste ; total sans les comptes partagés', async () => {
+		await getDb().insert(userLink).values({ requesterId: a, receiverId: b, status: 'accepted' });
+		await shareAccount(a, commonA, b);
+		// Revenus personnels égaux : prorata 50/50
+		for (const [u, acc] of [
+			[a, accA],
+			[b, accB]
+		] as const) {
+			await createIncome(u, {
+				bankAccountId: acc,
+				label: 'Salaire',
+				amount: '2000',
+				dayOfMonth: 1
+			});
+		}
+		// 1000 € à 70 (A, l'auteur) / 30 (B) + 200 € non partagés (50/50)
+		await createExpense(a, {
+			bankAccountId: commonA,
+			label: 'Loyer',
+			amount: '1000',
+			dayOfMonth: 1,
+			isShared: true,
+			isProrata: false,
+			participants: [{ userId: b, sharePercentage: '30' }]
+		});
+		await createExpense(a, {
+			bankAccountId: commonA,
+			label: 'Internet',
+			amount: '200',
+			dayOfMonth: 1,
+			isShared: false,
+			isProrata: false
+		});
+
+		const [s] = await getCommonAccountSuggestions(b, await getAccessibleAccounts(b));
+		assert.equal(s.totalToCover, 1200);
+		assert.deepEqual(Object.fromEntries(s.breakdown.map((x) => [x.userId, x.amount])), {
+			[a]: 800,
+			[b]: 400
+		});
+		assert.equal(s.myAmount, 400);
+
+		// B voit le compte commun de A, mais son total ne compte que ses comptes : 0 + 2000
+		const dash = await getDashboard(b, await getAccessibleAccounts(b));
+		assert.ok(dash.accounts.some((x) => x.id === commonA));
+		assert.equal(dash.totalBalance, 2000);
 	});
 });

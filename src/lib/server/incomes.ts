@@ -41,7 +41,7 @@ export function deleteIncome(userId: string, id: number) {
 		.where(and(eq(income.id, id), eq(income.userId, userId)));
 }
 
-/** Somme des revenus des comptes personnels de chaque userId (base du prorata), en une requête */
+/** Somme des revenus (centimes) des comptes personnels de chaque userId (base du prorata), en une requête */
 export async function incomeByUser(userIds: string[]) {
 	const personalAccounts = await getDb().query.bankAccount.findMany({
 		where: and(eq(bankAccount.type, 'personal'), inArray(bankAccount.userId, userIds)),

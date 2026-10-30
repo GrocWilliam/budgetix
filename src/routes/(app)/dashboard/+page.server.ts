@@ -5,10 +5,9 @@ import { getAccessibleAccounts } from '$lib/server/accounts';
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
 	const accessible = await getAccessibleAccounts(userId);
-	const [accounts, suggestions] = await Promise.all([
-		getDashboard(accessible),
+	const [{ accounts, totalBalance }, suggestions] = await Promise.all([
+		getDashboard(userId, accessible),
 		getCommonAccountSuggestions(userId, accessible)
 	]);
-	const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 	return { accounts, totalBalance, suggestions };
 };

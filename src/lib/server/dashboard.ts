@@ -3,25 +3,27 @@ import { bankAccountShare, income, expense, scheduledTransfer, user } from './db
 import { or, inArray } from 'drizzle-orm';
 import type { AccessibleAccount } from './accounts';
 import { incomeByUser } from './incomes';
-import { currentMonth, prorataShares, sum } from './rules';
+import { cents, currentMonth, euros, isDue, prorataShares, sum } from './rules';
 
 /**
- * Pour chaque compte commun accessible à l'utilisateur, calcule :
- * - le total mensuel des dépenses portées par ce compte
- * - la part (prorata des revenus personnels) que chaque participant doit virer
- * - en particulier la part de l'utilisateur courant
+ * Pour chaque compte commun accessible à l'utilisateur, calcule ce que chacun doit y virer
+ * pour couvrir le mois :
+ * - chaque dépense commune selon sa propre répartition (parts fixes ou prorata de ses participants)
+ * - les dépenses non partagées, virements sortants et revenus du compte au prorata des revenus
+ *   personnels des membres du compte
  *
- * Un "participant" d'un compte commun = son propriétaire + tous les utilisateurs
- * avec qui il est partagé via bank_account_share.
+ * Membres d'un compte commun = son propriétaire + les utilisateurs avec qui il est partagé.
  */
 export async function getCommonAccountSuggestions(userId: string, accessible: AccessibleAccount[]) {
-	// Tous les comptes communs accessibles (possédés ou partagés)
 	const commonAccounts = accessible.filter((a) => a.type === 'common');
 	const ids = commonAccounts.map((a) => a.id);
 
 	// Toutes les dépenses, virements sortants et revenus des comptes (pas filtrés par utilisateur)
 	const [expenses, transfersOut, incomes, shares, owners] = await Promise.all([
-		getDb().query.expense.findMany({ where: inArray(expense.bankAccountId, ids) }),
+		getDb().query.expense.findMany({
+			where: inArray(expense.bankAccountId, ids),
+			with: { participants: { with: { user: true } } }
+		}),
 		getDb().query.scheduledTransfer.findMany({
 			where: inArray(scheduledTransfer.fromAccountId, ids)
 		}),
@@ -38,60 +40,96 @@ export async function getCommonAccountSuggestions(userId: string, accessible: Ac
 		})
 	]);
 
-	const participantsOf = (acc: AccessibleAccount) => {
+	const membersOf = (acc: AccessibleAccount) => {
 		const owner = owners.find((u) => u.id === acc.userId);
 		return [
 			...(owner ? [owner] : []),
 			...shares.filter((s) => s.bankAccountId === acc.id).map((s) => s.sharedWithUser)
 		];
 	};
-	const personalIncomes = await incomeByUser(
-		commonAccounts.flatMap((acc) => participantsOf(acc).map((p) => p.id))
-	);
+	const personalIncomes = await incomeByUser([
+		...commonAccounts.flatMap((acc) => membersOf(acc).map((p) => p.id)),
+		...expenses.flatMap((e) => e.participants.map((p) => p.userId))
+	]);
 
 	const suggestions = commonAccounts.map((acc) => {
-		const totalExpenses = sum(expenses.filter((e) => e.bankAccountId === acc.id));
+		const accExpenses = expenses.filter((e) => e.bankAccountId === acc.id);
+		const totalExpenses = sum(accExpenses);
 		const totalTransfersOut = sum(transfersOut.filter((t) => t.fromAccountId === acc.id));
 		const totalIncomes = sum(incomes.filter((i) => i.bankAccountId === acc.id));
-		const totalToCover = Math.max(0, totalExpenses + totalTransfersOut - totalIncomes);
 
-		// Participants = propriétaire + utilisateurs avec accès partagé
-		const participants = participantsOf(acc);
-
-		// Calcul prorata selon les revenus personnels des participants
-		const prorataMap = prorataShares(
-			participants.map((p) => p.id),
+		const members = membersOf(acc);
+		const accountSplit = prorataShares(
+			members.map((m) => m.id),
 			personalIncomes
 		);
 
-		const breakdown = participants.map((p) => ({
+		// Centimes dus par utilisateur ; `split` = pourcentage par userId
+		const due = new Map<string, number>();
+		const add = (split: Map<string, number>, amount: number) => {
+			for (const [id, pct] of split) due.set(id, (due.get(id) ?? 0) + (amount * pct) / 100);
+		};
+		for (const e of accExpenses) {
+			const ps = e.isShared ? e.participants : [];
+			const split =
+				ps.length === 0
+					? accountSplit
+					: e.isProrata
+						? prorataShares(
+								ps.map((p) => p.userId),
+								personalIncomes
+							)
+						: new Map(ps.map((p) => [p.userId, parseFloat(p.sharePercentage)]));
+			add(split, cents(e.amount));
+		}
+		add(accountSplit, totalTransfersOut - totalIncomes);
+
+		// Membres du compte + participants d'une dépense qui n'en sont pas membres
+		const people = [...members, ...accExpenses.flatMap((e) => e.participants.map((p) => p.user))];
+		const unique = [...new Map(people.map((p) => [p.id, p])).values()];
+		const amounts = unique.map((p) => ({
+			p,
+			// Les revenus du compte peuvent dépasser la part de quelqu'un : rien à virer, pas un crédit
+			amount: Math.max(0, Math.round(due.get(p.id) ?? 0))
+		}));
+		// Total = somme des parts arrondies : la répartition affichée tombe juste au centime
+		const totalToCover = amounts.reduce((s, a) => s + a.amount, 0);
+
+		const breakdown = amounts.map(({ p, amount }) => ({
 			userId: p.id,
 			userName: p.name,
-			sharePercent: prorataMap.get(p.id) ?? 0,
-			amount: totalToCover * ((prorataMap.get(p.id) ?? 0) / 100)
+			sharePercent: totalToCover === 0 ? 0 : (amount / totalToCover) * 100,
+			amount: euros(amount)
 		}));
-
 		const mine = breakdown.find((b) => b.userId === userId);
 
 		return {
 			account: { id: acc.id, name: acc.name, color: acc.color },
-			totalExpenses,
-			totalTransfersOut,
-			totalIncomes,
-			totalToCover,
+			totalExpenses: euros(totalExpenses),
+			totalTransfersOut: euros(totalTransfersOut),
+			totalIncomes: euros(totalIncomes),
+			totalToCover: euros(totalToCover),
 			myShare: mine?.sharePercent ?? 0,
 			myAmount: mine?.amount ?? 0,
 			breakdown
 		};
 	});
 
-	// Ne retourner que les comptes communs ayant des dépenses ou virements sortants
+	// Ne retourner que les comptes communs ayant quelque chose à couvrir
 	return suggestions.filter((s) => s.totalToCover > 0);
 }
 
-export async function getDashboard(accounts: AccessibleAccount[]) {
+/**
+ * Solde de chaque compte accessible :
+ * - `balance` : théorique en fin de mois (solde initial + tous les mouvements du mois)
+ * - `expectedToday` : prévu aujourd'hui (seuls les mouvements dont le jour est passé)
+ * - `delta` : solde actuel saisi - prévu aujourd'hui (null sans solde actuel)
+ * `totalBalance` ne compte que les comptes de l'utilisateur, pas ceux partagés avec lui.
+ */
+export async function getDashboard(userId: string, accounts: AccessibleAccount[]) {
 	const ids = accounts.map((a) => a.id);
-	const month = currentMonth();
+	const now = new Date();
+	const month = currentMonth(now);
 
 	const [incomes, expenses, transfers] = await Promise.all([
 		getDb().query.income.findMany({ where: inArray(income.bankAccountId, ids) }),
@@ -104,33 +142,39 @@ export async function getDashboard(accounts: AccessibleAccount[]) {
 		})
 	]);
 
-	return accounts.map((acc) => {
-		const accExpenses = expenses.filter((e) => e.bankAccountId === acc.id);
-		const totalIncomes = sum(incomes.filter((i) => i.bankAccountId === acc.id));
+	const dueSum = (rows: { amount: string; dayOfMonth: number }[]) =>
+		sum(rows.filter((r) => isDue(r.dayOfMonth, now)));
 
+	const computed = accounts.map((acc) => {
+		const accIncomes = incomes.filter((i) => i.bankAccountId === acc.id);
 		// Le montant intégral de chaque dépense est débité du compte,
 		// quelle que soit la répartition entre participants.
-		const totalExpenses = sum(accExpenses);
-		const totalRealizedExpenses = sum(accExpenses.filter((e) => e.realizedMonth === month));
+		const accExpenses = expenses.filter((e) => e.bankAccountId === acc.id);
+		const accOut = transfers.filter((t) => t.fromAccountId === acc.id);
+		const accIn = transfers.filter((t) => t.toAccountId === acc.id);
 
-		const totalTransfersOut = sum(transfers.filter((t) => t.fromAccountId === acc.id));
-		const totalTransfersIn = sum(transfers.filter((t) => t.toAccountId === acc.id));
-
-		const balance =
-			parseFloat(acc.initialBalance) +
-			totalIncomes -
-			totalExpenses -
-			totalTransfersOut +
-			totalTransfersIn;
+		const initial = cents(acc.initialBalance);
+		const balance = initial + sum(accIncomes) - sum(accExpenses) - sum(accOut) + sum(accIn);
+		const expectedToday =
+			initial + dueSum(accIncomes) - dueSum(accExpenses) - dueSum(accOut) + dueSum(accIn);
+		const delta = acc.currentBalance == null ? null : cents(acc.currentBalance) - expectedToday;
 
 		return {
 			...acc,
-			totalIncomes,
-			totalExpenses,
-			totalRealizedExpenses,
-			totalTransfersOut,
-			totalTransfersIn,
-			balance
+			totalIncomes: euros(sum(accIncomes)),
+			totalExpenses: euros(sum(accExpenses)),
+			totalRealizedExpenses: euros(sum(accExpenses.filter((e) => e.realizedMonth === month))),
+			totalTransfersOut: euros(sum(accOut)),
+			totalTransfersIn: euros(sum(accIn)),
+			balance: euros(balance),
+			expectedToday: euros(expectedToday),
+			delta: delta === null ? null : euros(delta)
 		};
 	});
+
+	// balance * 100 redonne exactement les centimes (balance = centimes / 100)
+	const totalBalance = euros(
+		computed.filter((a) => a.userId === userId).reduce((s, a) => s + Math.round(a.balance * 100), 0)
+	);
+	return { accounts: computed, totalBalance };
 }

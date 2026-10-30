@@ -17,8 +17,8 @@
 	<section class="equilibrage">
 		<h2>Équilibrage ce mois-ci</h2>
 		<p class="equilibrage-desc">
-			Montants à virer sur chaque compte commun pour couvrir votre part des dépenses, calculés au
-			prorata de vos revenus personnels.
+			Montants à virer sur chaque compte commun pour couvrir votre part des dépenses : selon la
+			répartition de chaque dépense commune, sinon au prorata des revenus personnels.
 		</p>
 		<div class="suggestions-grid">
 			{#each data.suggestions as s (s.account.id)}
@@ -45,7 +45,7 @@
 					<div class="suggestion-amount">
 						<span class="amount-label">Votre contribution</span>
 						<span class="amount-value">{fmt(s.myAmount)} €</span>
-						<span class="amount-pct">({s.myShare.toFixed(1)} % des revenus)</span>
+						<span class="amount-pct">({s.myShare.toFixed(1)} % du total)</span>
 					</div>
 					{#if s.breakdown.length > 1}
 						<div class="breakdown">
@@ -64,7 +64,7 @@
 {/if}
 
 <div class="total-card">
-	<span class="label">Solde total disponible</span>
+	<span class="label">Solde total de mes comptes (fin de mois)</span>
 	<span class="total" class:negative={data.totalBalance < 0}>
 		{fmt(data.totalBalance)} €
 	</span>
@@ -81,19 +81,23 @@
 				<div class="shared-by">Partagé par {acc._sharedBy.name}</div>
 			{/if}
 
-			{#if acc.currentBalance !== null && acc.currentBalance !== undefined}
+			{#if acc.currentBalance != null && acc.delta != null}
 				{@const current = parseFloat(acc.currentBalance)}
-				{@const delta = current - acc.balance}
 				<div class="current-balance-row">
 					<span class="current-balance-label">Solde actuel</span>
 					<span class="current-balance-value" class:negative={current < 0}>{fmt(current)} €</span>
 				</div>
-				<div class="delta-row" class:delta-pos={delta >= 0} class:delta-neg={delta < 0}>
-					<span>Écart vs théorique</span>
-					<span>{delta >= 0 ? '+' : ''}{fmt(delta)} €</span>
+				<div
+					class="delta-row"
+					class:delta-pos={acc.delta >= 0}
+					class:delta-neg={acc.delta < 0}
+					title="Prévu aujourd'hui : {fmt(acc.expectedToday)} €"
+				>
+					<span>Écart vs prévu aujourd'hui</span>
+					<span>{acc.delta >= 0 ? '+' : ''}{fmt(acc.delta)} €</span>
 				</div>
 				<div class="balance balance--theoretical" class:negative={acc.balance < 0}>
-					{fmt(acc.balance)} € <span class="theoretical-label">théorique</span>
+					{fmt(acc.balance)} € <span class="theoretical-label">fin de mois</span>
 				</div>
 			{:else}
 				<div class="balance" class:negative={acc.balance < 0}>{fmt(acc.balance)} €</div>
@@ -110,7 +114,7 @@
 				</div>
 				<div class="detail-row expense">
 					<span>Dépenses prévues</span>
-					<span>-{fmt(acc.totalExpenses)} €</span>
+					<span>{acc.totalExpenses > 0 ? '-' : ''}{fmt(acc.totalExpenses)} €</span>
 				</div>
 				{#if acc.totalRealizedExpenses > 0}
 					<div class="detail-row realized">
